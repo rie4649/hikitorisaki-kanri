@@ -105,6 +105,9 @@
   .addRow input { flex: 1; }
   .addRow button { padding: 10px 16px; border: none; border-radius: 8px; background: #14213D; color: white; }
   .settingsAddBtn { width: 100%; padding: 12px; border: none; border-radius: 8px; background: #14213D; color: white; font-size: 15px; margin-bottom: 20px; }
+  .shuhinDropdown { margin-top: 6px; }
+  .shuhinToggle { width: 100%; text-align: left; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; font-size: 15px; color: #222; }
+  .shuhinPanel { margin-top: 8px; border: 1px solid #eee; border-radius: 8px; padding: 10px; background: #fafafa; max-height: 220px; overflow-y: auto; }
 </style>
 </head>
 <body>
@@ -222,7 +225,10 @@
     <input type="text" id="newOtherItems">
 
     <label>回収品</label>
-    <div class="checkrow" id="newShuhinChecks"></div>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="newShuhinToggleBtn" onclick="toggleShuhinDropdown('newShuhinChecks')">回収品を選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="newShuhinChecks" style="display:none;"></div>
+    </div>
 
     <label>備考</label>
     <textarea id="newNotes"></textarea>
@@ -280,7 +286,10 @@
     <input type="text" id="editOtherItems">
 
     <label>回収品</label>
-    <div class="checkrow" id="editShuhinChecks"></div>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="editShuhinToggleBtn" onclick="toggleShuhinDropdown('editShuhinChecks')">回収品を選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="editShuhinChecks" style="display:none;"></div>
+    </div>
 
     <label>備考</label>
     <textarea id="editNotes"></textarea>
@@ -382,7 +391,10 @@
     <input type="text" id="hOtherItems">
 
     <label>回収品</label>
-    <div class="checkrow" id="historyShuhin"></div>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="historyShuhinToggleBtn" onclick="toggleShuhinDropdown('historyShuhin')">回収品を選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="historyShuhin" style="display:none;"></div>
+    </div>
 
     <label>備考</label>
     <textarea id="historyNotes"></textarea>
@@ -413,7 +425,10 @@
     <input type="text" id="tcOtherItems">
 
     <label>回収品</label>
-    <div class="checkrow" id="tcShuhin"></div>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="tcShuhinToggleBtn" onclick="toggleShuhinDropdown('tcShuhin')">回収品を選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="tcShuhin" style="display:none;"></div>
+    </div>
 
     <label>備考</label>
     <textarea id="tcNotes"></textarea>
@@ -867,8 +882,31 @@ function fillShuhinCheckboxes(selected) {
     el.innerHTML = shuhinOptions.length
       ? shuhinOptions.map(name => `<label><input type="checkbox" class="shuhinCk" data-group="${id}" value="${name}" ${selected.includes(name) ? 'checked' : ''}> ${name}</label>`).join('')
       : '<span style="color:#999;font-size:13px;">設定タブで回収品を追加してください</span>';
+    updateShuhinButtonLabel(id);
   });
 }
+const shuhinBtnMap = {
+  newShuhinChecks: 'newShuhinToggleBtn',
+  editShuhinChecks: 'editShuhinToggleBtn',
+  historyShuhin: 'historyShuhinToggleBtn',
+  tcShuhin: 'tcShuhinToggleBtn'
+};
+function toggleShuhinDropdown(panelId) {
+  const panel = document.getElementById(panelId);
+  panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'block' : 'none';
+}
+function updateShuhinButtonLabel(panelId) {
+  const panel = document.getElementById(panelId);
+  const btn = document.getElementById(shuhinBtnMap[panelId]);
+  if (!panel || !btn) return;
+  const checked = Array.from(panel.querySelectorAll('input[type=checkbox]:checked')).map(el => el.value);
+  btn.textContent = (checked.length ? checked.join('・') : '回収品を選択') + ' ▾';
+}
+document.addEventListener('change', (e) => {
+  if (e.target.classList && e.target.classList.contains('shuhinCk')) {
+    updateShuhinButtonLabel(e.target.dataset.group);
+  }
+});
 function getCheckedValues(groupId) {
   return Array.from(document.querySelectorAll(`#${groupId} input[type=checkbox]:checked`)).map(el => el.value);
 }

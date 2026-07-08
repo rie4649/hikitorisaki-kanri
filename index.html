@@ -340,16 +340,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
-// ▼▼▼ 他のアプリと同じ設定に置き換えてください ▼▼▼
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
+  apiKey: "AIzaSyD99MxOMnGplSQjV7830bS7-gdCBSM9DGY",
   authDomain: "sekine-store.firebaseapp.com",
   projectId: "sekine-store",
-  storageBucket: "sekine-store.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  storageBucket: "sekine-store.firebasestorage.app",
+  messagingSenderId: "781856496751",
+  appId: "1:781856496751:web:e2e1e5de4cd803415a819a"
 };
-// ▲▲▲ ここまで ▲▲▲
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
@@ -404,7 +402,6 @@ function fillItemsToInputs(prefix, items) {
   document.getElementById(prefix + 'OtherItems').value = items.otherText || '';
 }
 
-// ---- タブ切替 ----
 function switchTab(tab) {
   activeTab = tab;
   ['clients','today','todayhistory','settings'].forEach(t => {
@@ -418,7 +415,6 @@ function switchTab(tab) {
   renderAll();
 }
 
-// ---- Firestore 購読 ----
 db.collection('companies').orderBy('name').onSnapshot(snapshot => {
   companies = [];
   snapshot.forEach(doc => companies.push({id: doc.id, ...doc.data()}));
@@ -456,7 +452,6 @@ function renderAll() {
   if (activeTab === 'todayhistory') renderTodayHistory();
 }
 
-// ---- 取引先タブ ----
 function renderClientList() {
   const keyword = document.getElementById('searchBox').value.trim();
   const list = document.getElementById('clientList');
@@ -633,7 +628,6 @@ function deleteHistory(hid) {
   db.collection('pickupLogs').doc(hid).delete();
 }
 
-// ---- 選択肢の描画(トラック/回収者/回収品) ----
 function fillTruckSelectOptions() {
   ['historyTruck','tcTruck'].forEach(id => {
     const sel = document.getElementById(id);
@@ -666,7 +660,6 @@ function getCheckedCollectors(groupId) {
   return Array.from(document.querySelectorAll(`.collectorCk[data-group="${groupId}"]:checked`)).map(el => el.value);
 }
 
-// ---- 手動履歴追加(取引先タブ) ----
 function openManualHistory() {
   document.getElementById('historyDate').value = todayStr();
   document.getElementById('historyTruck').value = '';
@@ -695,7 +688,6 @@ function saveManualHistory() {
   db.collection('pickupLogs').add(data).then(() => closeModal('historyModal')).catch(err => alert('保存に失敗しました: ' + err.message));
 }
 
-// ---- 本日の回収タブ ----
 function renderTodayList() {
   const keyword = document.getElementById('searchBox').value.trim();
   const list = document.getElementById('todayList');
@@ -756,7 +748,6 @@ function saveTodayComplete() {
   db.collection('pickupLogs').add(data).then(() => closeModal('todayCompleteModal')).catch(err => alert('保存に失敗しました: ' + err.message));
 }
 
-// ---- 本日の履歴タブ ----
 function renderTodayHistory() {
   const list = document.getElementById('todayHistoryList');
   if (todayLogs.length === 0) { list.innerHTML = '<div class="empty">本日はまだ回収記録がありません</div>'; return; }
@@ -771,7 +762,6 @@ function renderTodayHistory() {
   `).join('');
 }
 
-// ---- 設定タブ ----
 function renderSettings() {
   const truckDiv = document.getElementById('truckChips');
   truckDiv.innerHTML = truckList.length ? truckList.map(t => `<span class="chip">${t} <span class="x" onclick="removeTruck('${t}')">✕</span></span>`).join('')

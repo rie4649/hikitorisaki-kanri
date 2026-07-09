@@ -24,18 +24,18 @@
   * { box-sizing: border-box; }
   body {
     margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
-    background: #f5f5f5; color: #222; padding-bottom: 80px;
+    background: #f5f5f5; color: #222; padding-bottom: 30px;
   }
   header { position: sticky; top: 0; z-index: 10; background: #14213D; color: white; padding: 14px 16px; }
   header h1 { margin: 0 0 10px 0; font-size: 18px; }
   #searchWrap { position: relative; }
   #searchBox { width: 100%; padding: 10px 12px; border: none; border-radius: 8px; font-size: 15px; }
-  #searchSuggest {
+  #searchSuggest, .searchSuggest2 {
     display: none; position: absolute; top: 100%; left: 0; right: 0; background: white;
     border-radius: 0 0 8px 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 15; max-height: 260px; overflow-y: auto;
   }
-  #searchSuggest.show { display: block; }
-  #searchSuggest .sItem { padding: 10px 12px; color: #222; font-size: 14px; border-bottom: 1px solid #eee; }
+  #searchSuggest.show, .searchSuggest2.show { display: block; }
+  #searchSuggest .sItem, .searchSuggest2 .sItem { padding: 10px 12px; color: #222; font-size: 14px; border-bottom: 1px solid #eee; background: white; }
   #searchSuggest .sItem b { color: #14213D; }
   .backRow { padding: 10px 12px 0; }
   .backBtn { background: none; border: none; color: #14213D; font-size: 14px; padding: 6px 0; }
@@ -52,7 +52,7 @@
   .cardBtnRow { margin-top: 10px; }
   .cardBtnRow button { width: 100%; padding: 10px; border: none; border-radius: 8px; background: #14213D; color: white; font-size: 14px; }
   .cardBtnRow button.done { background: #ccc; color: #555; }
-  .fab { position: fixed; right: 20px; bottom: 78px; width: 56px; height: 56px; border-radius: 50%; background: #14213D; color: white; font-size: 28px; border: none; box-shadow: 0 3px 8px rgba(0,0,0,0.3); z-index: 5; }
+  .fab { position: fixed; right: 20px; bottom: 24px; width: 56px; height: 56px; border-radius: 50%; background: #14213D; color: white; font-size: 28px; border: none; box-shadow: 0 3px 8px rgba(0,0,0,0.3); z-index: 5; }
   .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: flex-end; }
   .overlay.show { display: flex; }
   .sheet { background: white; width: 100%; max-height: 88vh; overflow-y: auto; border-radius: 16px 16px 0 0; padding: 20px; }
@@ -90,15 +90,6 @@
   .historyItem .del { color: #c0392b; font-size: 12px; float: right; }
   .closeBtn { text-align: right; font-size: 14px; color: #666; margin-bottom: 6px; }
   .empty { text-align: center; color: #999; padding: 40px 0; }
-  nav.bottomNav {
-    position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex;
-    border-top: 1px solid #ddd; z-index: 20;
-  }
-  nav.bottomNav button {
-    flex: 1; padding: 10px 4px; border: none; background: none; font-size: 12px; color: #888;
-  }
-  nav.bottomNav button.active { color: #14213D; font-weight: bold; }
-  nav.bottomNav button .ic { display: block; font-size: 18px; margin-bottom: 2px; }
   .chip { display: inline-flex; align-items: center; gap: 6px; background: #e8ecf3; color: #14213D; padding: 6px 10px; border-radius: 16px; font-size: 14px; margin: 4px 6px 0 0; }
   .chip .x { cursor: pointer; color: #c0392b; font-weight: bold; }
   .addRow { display: flex; gap: 8px; margin-top: 10px; }
@@ -108,13 +99,18 @@
   .shuhinDropdown { margin-top: 6px; }
   .shuhinToggle { width: 100%; text-align: left; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; font-size: 15px; color: #222; }
   .shuhinPanel { margin-top: 8px; border: 1px solid #eee; border-radius: 8px; padding: 10px; background: #fafafa; max-height: 220px; overflow-y: auto; }
+  .searchBoxWrap { position: relative; margin-bottom: 10px; }
+  .homeMenu { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  .homeMenuBtn { width: 100%; padding: 18px; border: none; border-radius: 12px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 16px; color: #14213D; text-align: left; font-weight: bold; }
+  .homeMenuBtn .emoji { font-size: 20px; margin-right: 10px; }
+  .listBackRow { margin-bottom: 10px; }
 </style>
 </head>
 <body>
 
 <header>
   <h1 id="headerTitle">🏢 取引先管理</h1>
-  <div id="searchWrap">
+  <div id="searchWrap" style="display:none;">
     <input id="searchBox" type="text" placeholder="会社名で検索(1文字から候補が出ます)" autocomplete="off">
     <div id="searchSuggest"></div>
   </div>
@@ -125,14 +121,118 @@
 </div>
 
 <div class="section active" id="section-clients">
-  <div id="clientList"></div>
+  <div id="homeView">
+    <div class="card">
+      <label>取引先を検索して確認</label>
+      <div class="searchBoxWrap">
+        <input type="text" id="homeSearchBox" placeholder="会社名を入力" autocomplete="off">
+        <div id="homeSearchSuggest" class="searchSuggest2"></div>
+      </div>
+      <button class="primary" style="width:100%;margin-top:10px;" onclick="confirmHomeSearch()">確認</button>
+    </div>
+    <div class="homeMenu">
+      <button class="homeMenuBtn" onclick="showClientList()"><span class="emoji">🏢</span>取引先一覧</button>
+      <button class="homeMenuBtn" onclick="switchTab('schedule')"><span class="emoji">🗓️</span>回収予定</button>
+      <button class="homeMenuBtn" onclick="switchTab('today')"><span class="emoji">🚚</span>本日の回収</button>
+      <button class="homeMenuBtn" onclick="switchTab('todayhistory')"><span class="emoji">📋</span>本日の履歴</button>
+      <button class="homeMenuBtn" onclick="switchTab('settings')"><span class="emoji">⚙️</span>設定</button>
+    </div>
+  </div>
+  <div id="clientListWrap" style="display:none;">
+    <div class="listBackRow">
+      <button class="backBtn" onclick="showHomeView()">← ホームに戻る</button>
+    </div>
+    <div id="clientList"></div>
+  </div>
+</div>
+
+<div class="section" id="section-schedule">
+  <button class="settingsAddBtn" onclick="openAddSchedule()">＋ 回収予定を登録</button>
+  <div id="scheduleList"></div>
 </div>
 
 <div class="section" id="section-today">
-  <div id="todayList"></div>
+  <div class="searchBoxWrap">
+    <input id="todaySearchBox" type="text" placeholder="取引先を検索して選択" autocomplete="off">
+    <div id="todaySearchSuggest" class="searchSuggest2"></div>
+  </div>
+  <div id="todayFormWrap" style="display:none;">
+    <div class="card">
+      <h2 id="todayFormCompanyName"></h2>
+      <div class="locName" id="todayFormLocName"></div>
+      <div id="todayLocSelectWrap" style="display:none;">
+        <label>拠点を選択</label>
+        <select id="todayLocSelect"></select>
+      </div>
+      <div class="detailRow"><div class="label">住所</div><div id="todayFormAddress"></div></div>
+      <div class="detailRow"><div class="label">電話</div><div id="todayFormPhone"></div></div>
+      <div id="todayAlreadyDone" style="display:none;color:#c0392b;font-size:13px;margin-top:6px;">本日すでに記録があります。追加で記録できます。</div>
+
+      <label>作業内容</label>
+      <textarea id="todayWorkContent" placeholder="例:ドラム3本回収、フレコン入替"></textarea>
+
+      <label>回収物</label>
+      <div class="shuhinDropdown">
+        <button type="button" class="shuhinToggle" id="todayShuhinToggleBtn" onclick="toggleMultiDropdown('todayShuhinChecks')">回収物を選択 ▾</button>
+        <div class="checkrow shuhinPanel" id="todayShuhinChecks" style="display:none;"></div>
+        <div class="addRow" style="margin-top:8px;">
+          <input type="text" id="todayShuhinQuickInput" placeholder="候補にない回収物を追加">
+          <button type="button" onclick="quickAddShuhin('todayShuhinChecks','todayShuhinQuickInput')">追加</button>
+        </div>
+      </div>
+      <label>回収物(自由記入・その他)</label>
+      <textarea id="todayShuhinFreeText" placeholder="候補にないものはこちらに記入"></textarea>
+
+      <label>マニフェスト(任意)</label>
+      <div class="radiorow">
+        <label><input type="radio" name="todayManifestHas" value="あり"> あり</label>
+        <label><input type="radio" name="todayManifestHas" value="なし" checked> なし</label>
+      </div>
+      <div class="shuhinDropdown">
+        <button type="button" class="shuhinToggle" id="todayManifestTypeToggleBtn" onclick="toggleMultiDropdown('todayManifestTypeChecks')">マニフェスト種類(任意) ▾</button>
+        <div class="checkrow shuhinPanel" id="todayManifestTypeChecks" style="display:none;"></div>
+      </div>
+      <div class="shuhinDropdown">
+        <button type="button" class="shuhinToggle" id="todayManifestDisposalToggleBtn" onclick="toggleMultiDropdown('todayManifestDisposalChecks')">マニフェスト処分先(任意) ▾</button>
+        <div class="checkrow shuhinPanel" id="todayManifestDisposalChecks" style="display:none;"></div>
+      </div>
+
+      <label>トラック(複数可)</label>
+      <div class="shuhinDropdown">
+        <button type="button" class="shuhinToggle" id="todayTruckToggleBtn" onclick="toggleMultiDropdown('todayTruckChecks')">トラックを選択 ▾</button>
+        <div class="checkrow shuhinPanel" id="todayTruckChecks" style="display:none;"></div>
+      </div>
+
+      <label>担当者(複数可)</label>
+      <div class="shuhinDropdown">
+        <button type="button" class="shuhinToggle" id="todayCollectorToggleBtn" onclick="toggleMultiDropdown('todayCollectorChecks')">担当者を選択 ▾</button>
+        <div class="checkrow shuhinPanel" id="todayCollectorChecks" style="display:none;"></div>
+      </div>
+
+      <label>備考</label>
+      <textarea id="todayNotes"></textarea>
+
+      <div class="btnrow">
+        <button class="secondary" onclick="cancelTodayForm()">キャンセル</button>
+        <button class="primary" onclick="saveTodayComplete()">回収完了として保存</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="section" id="section-todayhistory">
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <input type="month" id="monthlyPicker" style="flex:1;padding:10px;border:1px solid #ccc;border-radius:8px;">
+    <button type="button" onclick="showMonthlySummary()" style="padding:10px 16px;border:none;border-radius:8px;background:#14213D;color:white;white-space:nowrap;">集計する</button>
+  </div>
+  <div id="monthlySummaryWrap" style="display:none;">
+    <div id="monthlySummaryContent"></div>
+    <div class="btnrow">
+      <button class="secondary" onclick="closeMonthlySummary()">閉じる</button>
+      <button class="primary" onclick="printMonthlySummary()">印刷</button>
+    </div>
+    <h3 style="border-top:none;">今日の記録</h3>
+  </div>
   <div id="todayHistoryList"></div>
 </div>
 
@@ -167,7 +267,7 @@
     <button onclick="addTruck()">追加</button>
   </div>
 
-  <h3>回収者一覧</h3>
+  <h3>回収者一覧(担当者)</h3>
   <div id="collectorChips"></div>
   <div class="addRow">
     <input type="text" id="newCollectorInput" placeholder="例:川村">
@@ -183,13 +283,6 @@
 </div>
 
 <button class="fab" id="fabAdd" onclick="openAddCompany()">＋</button>
-
-<nav class="bottomNav">
-  <button id="nav-clients" class="active" onclick="switchTab('clients')"><span class="ic">🏢</span>取引先</button>
-  <button id="nav-today" onclick="switchTab('today')"><span class="ic">🚚</span>本日の回収</button>
-  <button id="nav-todayhistory" onclick="switchTab('todayhistory')"><span class="ic">📋</span>本日の履歴</button>
-  <button id="nav-settings" onclick="switchTab('settings')"><span class="ic">⚙️</span>設定</button>
-</nav>
 
 <!-- 会社(新規)追加 -->
 <div class="overlay" id="addModal">
@@ -211,10 +304,22 @@
       <label><input type="radio" name="newManifestHas" value="あり"> あり</label>
       <label><input type="radio" name="newManifestHas" value="なし" checked> なし</label>
     </div>
-    <label>マニフェスト種類</label>
-    <select id="newManifestType"><option value="">選択なし</option></select>
-    <label>マニフェスト処分先</label>
-    <select id="newManifestDisposal"><option value="">選択なし</option></select>
+    <label>マニフェスト種類(複数可)</label>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="newManifestTypeToggleBtn" onclick="toggleMultiDropdown('newManifestTypeChecks')">マニフェスト種類を選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="newManifestTypeChecks" style="display:none;"></div>
+    </div>
+    <label>マニフェスト処分先(複数可)</label>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="newManifestDisposalToggleBtn" onclick="toggleMultiDropdown('newManifestDisposalChecks')">マニフェスト処分先を選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="newManifestDisposalChecks" style="display:none;"></div>
+    </div>
+
+    <label>トラック(複数可)</label>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="newTruckToggleBtn" onclick="toggleMultiDropdown('newTruckChecks')">トラックを選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="newTruckChecks" style="display:none;"></div>
+    </div>
 
     <label>持ち物</label>
     <div class="qtyRow"><span class="qtyLabel">穴あきドラム(本)</span><input type="number" id="newQtyAnaAki" min="0" value="0"></div>
@@ -226,8 +331,12 @@
 
     <label>回収品</label>
     <div class="shuhinDropdown">
-      <button type="button" class="shuhinToggle" id="newShuhinToggleBtn" onclick="toggleShuhinDropdown('newShuhinChecks')">回収品を選択 ▾</button>
+      <button type="button" class="shuhinToggle" id="newShuhinToggleBtn" onclick="toggleMultiDropdown('newShuhinChecks')">回収品を選択 ▾</button>
       <div class="checkrow shuhinPanel" id="newShuhinChecks" style="display:none;"></div>
+      <div class="addRow" style="margin-top:8px;">
+        <input type="text" id="newShuhinQuickInput" placeholder="候補にない回収品を追加">
+        <button type="button" onclick="quickAddShuhin('newShuhinChecks','newShuhinQuickInput')">追加</button>
+      </div>
     </div>
 
     <label>備考</label>
@@ -272,10 +381,22 @@
       <label><input type="radio" name="editManifestHas" value="あり"> あり</label>
       <label><input type="radio" name="editManifestHas" value="なし"> なし</label>
     </div>
-    <label>マニフェスト種類</label>
-    <select id="editManifestType"><option value="">選択なし</option></select>
-    <label>マニフェスト処分先</label>
-    <select id="editManifestDisposal"><option value="">選択なし</option></select>
+    <label>マニフェスト種類(複数可)</label>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="editManifestTypeToggleBtn" onclick="toggleMultiDropdown('editManifestTypeChecks')">マニフェスト種類を選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="editManifestTypeChecks" style="display:none;"></div>
+    </div>
+    <label>マニフェスト処分先(複数可)</label>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="editManifestDisposalToggleBtn" onclick="toggleMultiDropdown('editManifestDisposalChecks')">マニフェスト処分先を選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="editManifestDisposalChecks" style="display:none;"></div>
+    </div>
+
+    <label>トラック(複数可)</label>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="editTruckToggleBtn" onclick="toggleMultiDropdown('editTruckChecks')">トラックを選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="editTruckChecks" style="display:none;"></div>
+    </div>
 
     <label>持ち物</label>
     <div class="qtyRow"><span class="qtyLabel">穴あきドラム(本)</span><input type="number" id="editQtyAnaAki" min="0" value="0"></div>
@@ -287,8 +408,12 @@
 
     <label>回収品</label>
     <div class="shuhinDropdown">
-      <button type="button" class="shuhinToggle" id="editShuhinToggleBtn" onclick="toggleShuhinDropdown('editShuhinChecks')">回収品を選択 ▾</button>
+      <button type="button" class="shuhinToggle" id="editShuhinToggleBtn" onclick="toggleMultiDropdown('editShuhinChecks')">回収品を選択 ▾</button>
       <div class="checkrow shuhinPanel" id="editShuhinChecks" style="display:none;"></div>
+      <div class="addRow" style="margin-top:8px;">
+        <input type="text" id="editShuhinQuickInput" placeholder="候補にない回収品を追加">
+        <button type="button" onclick="quickAddShuhin('editShuhinChecks','editShuhinQuickInput')">追加</button>
+      </div>
     </div>
 
     <label>備考</label>
@@ -343,9 +468,10 @@
     <div class="locName" id="detailLocName"></div>
     <div class="detailRow"><div class="label">住所</div><div id="detailAddress"></div></div>
     <div class="detailRow"><div class="label">電話</div><div id="detailPhone"></div></div>
-    <div class="detailRow"><div class="label">担当者(社内)</div><div id="detailStaff"></div></div>
     <div class="detailRow"><div class="label">取引先の担当者名</div><div id="detailClientContact"></div></div>
+    <div class="detailRow"><div class="label">担当者(社内)</div><div id="detailStaff"></div></div>
     <div class="detailRow"><div class="label">マニフェスト</div><div id="detailManifest"></div></div>
+    <div class="detailRow"><div class="label">トラック</div><div id="detailTruck"></div></div>
     <div class="detailRow"><div class="label">持ち物</div><div id="detailItems"></div></div>
     <div class="detailRow"><div class="label">回収品</div><div id="detailShuhin"></div></div>
     <div class="detailRow"><div class="label">備考</div><div id="detailNotes"></div></div>
@@ -377,10 +503,16 @@
     <h2>履歴を追加</h2>
     <label>回収日</label>
     <input type="date" id="historyDate">
-    <label>トラック</label>
-    <select id="historyTruck"><option value="">選択なし</option></select>
+    <label>トラック(複数可)</label>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="historyTruckToggleBtn" onclick="toggleMultiDropdown('historyTruckChecks')">トラックを選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="historyTruckChecks" style="display:none;"></div>
+    </div>
     <label>回収者(複数可)</label>
-    <div class="checkrow" id="historyCollectors"></div>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="historyCollectorToggleBtn" onclick="toggleMultiDropdown('historyCollectorChecks')">担当者を選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="historyCollectorChecks" style="display:none;"></div>
+    </div>
 
     <label>持ち物</label>
     <div class="qtyRow"><span class="qtyLabel">穴あきドラム(本)</span><input type="number" id="hQtyAnaAki" min="0" value="0"></div>
@@ -392,7 +524,7 @@
 
     <label>回収品</label>
     <div class="shuhinDropdown">
-      <button type="button" class="shuhinToggle" id="historyShuhinToggleBtn" onclick="toggleShuhinDropdown('historyShuhin')">回収品を選択 ▾</button>
+      <button type="button" class="shuhinToggle" id="historyShuhinToggleBtn" onclick="toggleMultiDropdown('historyShuhin')">回収品を選択 ▾</button>
       <div class="checkrow shuhinPanel" id="historyShuhin" style="display:none;"></div>
     </div>
 
@@ -405,36 +537,43 @@
   </div>
 </div>
 
-<!-- 本日の回収完了 -->
-<div class="overlay" id="todayCompleteModal">
+<!-- 回収予定を登録 -->
+<div class="overlay" id="scheduleModal">
   <div class="sheet">
-    <div class="closeBtn" onclick="closeModal('todayCompleteModal')">閉じる ✕</div>
-    <h2 id="tcCompanyName"></h2>
-    <div class="locName" id="tcLocName"></div>
-    <label>トラック</label>
-    <select id="tcTruck"><option value="">選択なし</option></select>
-    <label>回収者(複数可)</label>
-    <div class="checkrow" id="tcCollectors"></div>
-
-    <label>持ち物</label>
-    <div class="qtyRow"><span class="qtyLabel">穴あきドラム(本)</span><input type="number" id="tcQtyAnaAki" min="0" value="0"></div>
-    <div class="qtyRow"><span class="qtyLabel">穴なしドラム(本)</span><input type="number" id="tcQtyAnaNashi" min="0" value="0"></div>
-    <div class="qtyRow"><span class="qtyLabel">フレコン(枚)</span><input type="number" id="tcQtyFlecon" min="0" value="0"></div>
-    <div class="qtyRow"><span class="qtyLabel">箱(個)</span><input type="number" id="tcQtyBox" min="0" value="0"></div>
-    <label>その他持ち物(自由記載)</label>
-    <input type="text" id="tcOtherItems">
-
-    <label>回収品</label>
-    <div class="shuhinDropdown">
-      <button type="button" class="shuhinToggle" id="tcShuhinToggleBtn" onclick="toggleShuhinDropdown('tcShuhin')">回収品を選択 ▾</button>
-      <div class="checkrow shuhinPanel" id="tcShuhin" style="display:none;"></div>
+    <div class="closeBtn" onclick="closeModal('scheduleModal')">閉じる ✕</div>
+    <h2>回収予定を登録</h2>
+    <label>日付</label>
+    <input type="date" id="schedDate">
+    <label>取引先</label>
+    <div class="searchBoxWrap">
+      <input type="text" id="schedSearchBox" placeholder="会社名で検索" autocomplete="off">
+      <div id="schedSearchSuggest" class="searchSuggest2"></div>
     </div>
-
+    <div id="schedLocSelectWrap" style="display:none;">
+      <label>拠点を選択</label>
+      <select id="schedLocSelect"></select>
+    </div>
+    <label>取引先担当者</label>
+    <input type="text" id="schedClientContact">
+    <div class="detailRow"><div class="label">住所</div><div id="schedAddress"></div></div>
+    <div class="detailRow"><div class="label">電話</div><div id="schedPhone"></div></div>
+    <label>回収内容</label>
+    <textarea id="schedContent" placeholder="例:ドラム回収予定"></textarea>
+    <label>トラック(複数可)</label>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="schedTruckToggleBtn" onclick="toggleMultiDropdown('schedTruckChecks')">トラックを選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="schedTruckChecks" style="display:none;"></div>
+    </div>
+    <label>担当者(複数可)</label>
+    <div class="shuhinDropdown">
+      <button type="button" class="shuhinToggle" id="schedCollectorToggleBtn" onclick="toggleMultiDropdown('schedCollectorChecks')">担当者を選択 ▾</button>
+      <div class="checkrow shuhinPanel" id="schedCollectorChecks" style="display:none;"></div>
+    </div>
     <label>備考</label>
-    <textarea id="tcNotes"></textarea>
+    <textarea id="schedNotes"></textarea>
     <div class="btnrow">
-      <button class="secondary" onclick="closeModal('todayCompleteModal')">キャンセル</button>
-      <button class="primary" onclick="saveTodayComplete()">回収完了として保存</button>
+      <button class="secondary" onclick="closeModal('scheduleModal')">キャンセル</button>
+      <button class="primary" onclick="saveSchedule()">登録</button>
     </div>
   </div>
 </div>
@@ -465,6 +604,9 @@ let disposalList = [];
 let currentCompanyId = null, currentLocId = null;
 let historyUnsub = null;
 let activeTab = 'clients';
+let todayFormCompanyId = null, todayFormLocId = null;
+let schedCompanyId = null, schedLocId = null;
+let scheduleItems = [];
 
 function todayStr() {
   const d = new Date();
@@ -486,14 +628,14 @@ function itemsLabel(items) {
   if (items.otherText) parts.push(items.otherText);
   return parts.length ? parts.join('・') : 'なし';
 }
-function shuhinLabel(list) {
+function arrLabel(list) {
   return (list && list.length) ? list.join('・') : 'なし';
 }
 function manifestLabel(c) {
   if (!c || c.manifestHas !== 'あり') return 'なし';
   const parts = ['あり'];
-  if (c.manifestType) parts.push(c.manifestType);
-  if (c.manifestDisposal) parts.push('処分先:' + c.manifestDisposal);
+  if (c.manifestType && c.manifestType.length) parts.push(c.manifestType.join('・'));
+  if (c.manifestDisposal && c.manifestDisposal.length) parts.push('処分先:' + c.manifestDisposal.join('・'));
   return parts.join(' / ');
 }
 function readItemsFromInputs(prefix) {
@@ -519,19 +661,134 @@ function openMap(inputId) {
   window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(address), '_blank');
 }
 
+const multiSelectMap = {};
+function registerMultiSelect(panelId, btnId, defaultText) {
+  multiSelectMap[panelId] = {btnId, defaultText};
+}
+function toggleMultiDropdown(panelId) {
+  const panel = document.getElementById(panelId);
+  panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'block' : 'none';
+}
+function fillMultiCheckboxes(panelId, options, selected) {
+  selected = selected || [];
+  const el = document.getElementById(panelId);
+  if (!el) return;
+  el.innerHTML = options.length
+    ? options.map(name => '<label><input type="checkbox" class="multiCk" data-group="' + panelId + '" value="' + name + '" ' + (selected.includes(name) ? 'checked' : '') + '> ' + name + '</label>').join('')
+    : '<span style="color:#999;font-size:13px;">設定タブで追加してください</span>';
+  updateMultiButtonLabel(panelId);
+}
+function updateMultiButtonLabel(panelId) {
+  const panel = document.getElementById(panelId);
+  const info = multiSelectMap[panelId];
+  if (!panel || !info) return;
+  const btn = document.getElementById(info.btnId);
+  if (!btn) return;
+  const checked = Array.from(panel.querySelectorAll('input[type=checkbox]:checked')).map(el => el.value);
+  btn.textContent = (checked.length ? checked.join('・') : info.defaultText) + ' ▾';
+}
+function getMultiCheckedValues(panelId) {
+  return Array.from(document.querySelectorAll('#' + panelId + ' input[type=checkbox]:checked')).map(el => el.value);
+}
+function quickAddShuhin(panelId, inputId) {
+  const input = document.getElementById(inputId);
+  const name = input.value.trim();
+  if (!name) return;
+  const selectedNow = getMultiCheckedValues(panelId);
+  const newList = shuhinOptions.includes(name) ? shuhinOptions : shuhinOptions.concat([name]);
+  db.collection('pickupSettings').doc('shuhinOptions').set({names: newList}).then(() => {
+    shuhinOptions = newList;
+    fillMultiCheckboxes(panelId, shuhinOptions, selectedNow.concat([name]));
+    input.value = '';
+  }).catch(err => alert('追加に失敗しました: ' + err.message));
+}
+document.addEventListener('change', (e) => {
+  if (e.target.classList && e.target.classList.contains('multiCk')) {
+    updateMultiButtonLabel(e.target.dataset.group);
+  }
+});
+registerMultiSelect('newShuhinChecks','newShuhinToggleBtn','回収品を選択');
+registerMultiSelect('editShuhinChecks','editShuhinToggleBtn','回収品を選択');
+registerMultiSelect('historyShuhin','historyShuhinToggleBtn','回収品を選択');
+registerMultiSelect('newManifestTypeChecks','newManifestTypeToggleBtn','マニフェスト種類を選択');
+registerMultiSelect('editManifestTypeChecks','editManifestTypeToggleBtn','マニフェスト種類を選択');
+registerMultiSelect('newManifestDisposalChecks','newManifestDisposalToggleBtn','マニフェスト処分先を選択');
+registerMultiSelect('editManifestDisposalChecks','editManifestDisposalToggleBtn','マニフェスト処分先を選択');
+registerMultiSelect('newTruckChecks','newTruckToggleBtn','トラックを選択');
+registerMultiSelect('editTruckChecks','editTruckToggleBtn','トラックを選択');
+registerMultiSelect('historyTruckChecks','historyTruckToggleBtn','トラックを選択');
+registerMultiSelect('historyCollectorChecks','historyCollectorToggleBtn','担当者を選択');
+registerMultiSelect('todayShuhinChecks','todayShuhinToggleBtn','回収物を選択');
+registerMultiSelect('todayManifestTypeChecks','todayManifestTypeToggleBtn','マニフェスト種類(任意)');
+registerMultiSelect('todayManifestDisposalChecks','todayManifestDisposalToggleBtn','マニフェスト処分先(任意)');
+registerMultiSelect('todayTruckChecks','todayTruckToggleBtn','トラックを選択');
+registerMultiSelect('todayCollectorChecks','todayCollectorToggleBtn','担当者を選択');
+registerMultiSelect('schedTruckChecks','schedTruckToggleBtn','トラックを選択');
+registerMultiSelect('schedCollectorChecks','schedCollectorToggleBtn','担当者を選択');
+
 function switchTab(tab) {
   activeTab = tab;
-  ['clients','today','todayhistory','settings'].forEach(t => {
+  ['clients','schedule','today','todayhistory','settings'].forEach(t => {
     document.getElementById('section-' + t).classList.toggle('active', t === tab);
-    document.getElementById('nav-' + t).classList.toggle('active', t === tab);
   });
-  document.getElementById('searchWrap').style.display = (tab === 'settings') ? 'none' : 'block';
-  document.getElementById('fabAdd').style.display = (tab === 'clients') ? 'block' : 'none';
+  document.getElementById('fabAdd').style.display = 'none';
   document.getElementById('backRow').style.display = (tab === 'clients') ? 'none' : 'block';
-  const titles = {clients:'🏢 取引先管理', today:'🚚 本日の回収', todayhistory:'📋 本日の履歴', settings:'⚙️ 設定'};
+  const titles = {clients:'🏢 取引先管理', schedule:'🗓️ 回収予定', today:'🚚 本日の回収', todayhistory:'📋 本日の履歴', settings:'⚙️ 設定'};
   document.getElementById('headerTitle').textContent = titles[tab];
   hideSuggest();
+  if (tab === 'clients') showHomeView();
   renderAll();
+}
+function showHomeView() {
+  document.getElementById('homeView').style.display = 'block';
+  document.getElementById('clientListWrap').style.display = 'none';
+  document.getElementById('searchWrap').style.display = 'none';
+  document.getElementById('fabAdd').style.display = 'none';
+  document.getElementById('homeSearchBox').value = '';
+  document.getElementById('homeSearchSuggest').classList.remove('show');
+}
+function showClientList() {
+  document.getElementById('homeView').style.display = 'none';
+  document.getElementById('clientListWrap').style.display = 'block';
+  document.getElementById('searchWrap').style.display = 'block';
+  document.getElementById('fabAdd').style.display = 'block';
+  renderClientList();
+}
+let selectedHomeCompanyId = null;
+const homeSearchBox = document.getElementById('homeSearchBox');
+homeSearchBox.addEventListener('input', renderHomeSuggest);
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#homeSearchBox') && !e.target.closest('#homeSearchSuggest')) {
+    document.getElementById('homeSearchSuggest').classList.remove('show');
+  }
+});
+function renderHomeSuggest() {
+  const keyword = homeSearchBox.value.trim();
+  selectedHomeCompanyId = null;
+  const box = document.getElementById('homeSearchSuggest');
+  if (!keyword) { box.classList.remove('show'); return; }
+  const matches = companies.filter(c => (c.name||'').includes(keyword)).slice(0,8);
+  if (!matches.length) { box.classList.remove('show'); return; }
+  box.innerHTML = matches.map(c => '<div class="sItem" onclick="selectHomeSuggest(\'' + c.id + '\')">' + c.name + '</div>').join('');
+  box.classList.add('show');
+}
+function selectHomeSuggest(companyId) {
+  const c = companies.find(x => x.id === companyId);
+  if (!c) return;
+  homeSearchBox.value = c.name;
+  selectedHomeCompanyId = companyId;
+  document.getElementById('homeSearchSuggest').classList.remove('show');
+}
+function confirmHomeSearch() {
+  const val = homeSearchBox.value.trim();
+  if (!val) { alert('会社名を入力してください'); return; }
+  let company = selectedHomeCompanyId ? companies.find(c => c.id === selectedHomeCompanyId) : null;
+  if (!company) company = companies.find(c => c.name === val);
+  if (!company) company = companies.find(c => (c.name||'').includes(val));
+  if (!company) { alert('該当する取引先が見つかりません'); return; }
+  const loc = (company.locations || [])[0];
+  if (!loc) { alert('この会社には拠点が登録されていません'); return; }
+  openDetail(company.id, loc.id);
 }
 
 db.collection('companies').orderBy('name').onSnapshot(snapshot => {
@@ -547,6 +804,21 @@ db.collection('pickupLogs').where('date', '==', todayStr()).onSnapshot(snapshot 
   renderAll();
 });
 
+db.collection('pickupSchedule').onSnapshot(snapshot => {
+  scheduleItems = [];
+  snapshot.forEach(doc => scheduleItems.push({id: doc.id, ...doc.data()}));
+  cleanupExpiredSchedules();
+  scheduleItems.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  renderScheduleList();
+});
+function cleanupExpiredSchedules() {
+  const today = todayStr();
+  scheduleItems.filter(s => s.date && s.date < today).forEach(s => {
+    db.collection('pickupSchedule').doc(s.id).delete();
+  });
+  scheduleItems = scheduleItems.filter(s => !(s.date && s.date < today));
+}
+
 function subscribeList(docName, setter, afterFn) {
   db.collection('pickupSettings').doc(docName).onSnapshot(doc => {
     setter((doc.exists && doc.data().names) ? doc.data().names : []);
@@ -554,12 +826,12 @@ function subscribeList(docName, setter, afterFn) {
     if (afterFn) afterFn();
   });
 }
-subscribeList('truckList', v => truckList = v, fillTruckSelectOptions);
-subscribeList('collectorList', v => collectorList = v, fillCollectorCheckboxes);
-subscribeList('shuhinOptions', v => shuhinOptions = v, fillShuhinCheckboxes);
+subscribeList('truckList', v => truckList = v);
+subscribeList('collectorList', v => collectorList = v);
+subscribeList('shuhinOptions', v => shuhinOptions = v);
 subscribeList('staffList', v => staffList = v, fillStaffSelectOptions);
-subscribeList('manifestTypes', v => manifestTypeList = v, fillManifestSelectOptions);
-subscribeList('disposalSites', v => disposalList = v, fillManifestSelectOptions);
+subscribeList('manifestTypes', v => manifestTypeList = v);
+subscribeList('disposalSites', v => disposalList = v);
 
 const searchBox = document.getElementById('searchBox');
 searchBox.addEventListener('input', () => { renderAll(); renderSuggest(); });
@@ -579,7 +851,7 @@ function renderSuggest() {
   box.innerHTML = matches.map(c => {
     const idx = c.name.indexOf(keyword);
     const before = c.name.slice(0, idx), mid = c.name.slice(idx, idx+keyword.length), after = c.name.slice(idx+keyword.length);
-    return `<div class="sItem" onclick="selectSuggest('${c.name.replace(/'/g,"\\'")}')">${before}<b>${mid}</b>${after}</div>`;
+    return '<div class="sItem" onclick="selectSuggest(\'' + c.name.replace(/'/g,"\\'") + '\')">' + before + '<b>' + mid + '</b>' + after + '</div>';
   }).join('');
   box.classList.add('show');
 }
@@ -591,7 +863,6 @@ function selectSuggest(name) {
 
 function renderAll() {
   if (activeTab === 'clients') renderClientList();
-  if (activeTab === 'today') renderTodayList();
   if (activeTab === 'todayhistory') renderTodayHistory();
 }
 
@@ -609,9 +880,10 @@ function renderClientList() {
       <h2>${company.name}</h2>
       <div class="locName">${loc.locationName || ''}</div>
       <div class="sub">${loc.address || ''}${loc.address && loc.phone ? ' ／ ' : ''}${loc.phone || ''}</div>
+      ${company.clientContact ? '<div class="sub">先方担当者: ' + company.clientContact + '</div>' : ''}
       <div class="tags">
         <span class="tag">${itemsLabel(company.items)}</span>
-        ${(company.shuhinSelected && company.shuhinSelected.length) ? '<span class="tag">' + shuhinLabel(company.shuhinSelected) + '</span>' : ''}
+        ${(company.shuhinSelected && company.shuhinSelected.length) ? '<span class="tag">' + arrLabel(company.shuhinSelected) + '</span>' : ''}
         ${company.manifestHas === 'あり' ? '<span class="tag manifest">マニフェスト有</span>' : ''}
       </div>
     </div>
@@ -624,21 +896,7 @@ function fillStaffSelectOptions() {
   ['newStaff','editStaff'].forEach(id => {
     const sel = document.getElementById(id);
     const cur = sel.value;
-    sel.innerHTML = '<option value="">選択なし</option>' + staffList.map(s => `<option value="${s}">${s}</option>`).join('');
-    sel.value = cur;
-  });
-}
-function fillManifestSelectOptions() {
-  ['newManifestType','editManifestType'].forEach(id => {
-    const sel = document.getElementById(id);
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">選択なし</option>' + manifestTypeList.map(s => `<option value="${s}">${s}</option>`).join('');
-    sel.value = cur;
-  });
-  ['newManifestDisposal','editManifestDisposal'].forEach(id => {
-    const sel = document.getElementById(id);
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">選択なし</option>' + disposalList.map(s => `<option value="${s}">${s}</option>`).join('');
+    sel.innerHTML = '<option value="">選択なし</option>' + staffList.map(s => '<option value="' + s + '">' + s + '</option>').join('');
     sel.value = cur;
   });
 }
@@ -648,10 +906,11 @@ function openAddCompany() {
   document.getElementById('newStaff').value = '';
   document.getElementById('newClientContact').value = '';
   document.querySelector('input[name=newManifestHas][value="なし"]').checked = true;
-  document.getElementById('newManifestType').value = '';
-  document.getElementById('newManifestDisposal').value = '';
+  fillMultiCheckboxes('newManifestTypeChecks', manifestTypeList, []);
+  fillMultiCheckboxes('newManifestDisposalChecks', disposalList, []);
+  fillMultiCheckboxes('newTruckChecks', truckList, []);
   fillItemsToInputs('new', {});
-  fillShuhinCheckboxes();
+  fillMultiCheckboxes('newShuhinChecks', shuhinOptions, []);
   document.getElementById('newNotes').value = '';
   document.getElementById('newLocName').value = '本社';
   document.getElementById('newLocAddress').value = '';
@@ -674,10 +933,11 @@ function saveNewCompany() {
     staff: document.getElementById('newStaff').value,
     clientContact: document.getElementById('newClientContact').value.trim(),
     manifestHas: manifestHasEl ? manifestHasEl.value : 'なし',
-    manifestType: document.getElementById('newManifestType').value,
-    manifestDisposal: document.getElementById('newManifestDisposal').value,
+    manifestType: getMultiCheckedValues('newManifestTypeChecks'),
+    manifestDisposal: getMultiCheckedValues('newManifestDisposalChecks'),
+    trucks: getMultiCheckedValues('newTruckChecks'),
     items: readItemsFromInputs('new'),
-    shuhinSelected: getCheckedValues('newShuhinChecks'),
+    shuhinSelected: getMultiCheckedValues('newShuhinChecks'),
     notes: document.getElementById('newNotes').value.trim(),
     locations: [loc],
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -696,11 +956,12 @@ function openDetail(companyId, locId) {
   document.getElementById('detailLocName').textContent = loc.locationName || '';
   document.getElementById('detailAddress').textContent = loc.address || '未登録';
   document.getElementById('detailPhone').textContent = loc.phone || '未登録';
-  document.getElementById('detailStaff').textContent = c.staff || 'なし';
   document.getElementById('detailClientContact').textContent = c.clientContact || 'なし';
+  document.getElementById('detailStaff').textContent = c.staff || 'なし';
   document.getElementById('detailManifest').textContent = manifestLabel(c);
+  document.getElementById('detailTruck').textContent = arrLabel(c.trucks);
   document.getElementById('detailItems').textContent = itemsLabel(c.items);
-  document.getElementById('detailShuhin').textContent = shuhinLabel(c.shuhinSelected);
+  document.getElementById('detailShuhin').textContent = arrLabel(c.shuhinSelected);
   document.getElementById('detailNotes').textContent = c.notes || 'なし';
   document.getElementById('detailModal').classList.add('show');
 
@@ -714,7 +975,7 @@ function openDetail(companyId, locId) {
     if (items.length > 0) {
       const h = items[0];
       document.getElementById('lastPickupContent').innerHTML =
-        `${h.date || ''} ${h.time || ''}<br>${(h.collectors||[]).join('・') || '担当者未記録'}${h.truck ? ' ／ ' + h.truck : ''}<br>${itemsLabel(h.items)}<br>${shuhinLabel(h.shuhinSelected)}`;
+        h.date + ' ' + h.time + '<br>' + arrLabel(h.collectors) + (h.trucks && h.trucks.length ? ' ／ ' + h.trucks.join('・') : '') + '<br>' + itemsLabel(h.items) + '<br>' + arrLabel(h.shuhinSelected);
       lastBox.style.display = 'block';
     } else {
       lastBox.style.display = 'none';
@@ -726,9 +987,10 @@ function openDetail(companyId, locId) {
       <div class="historyItem">
         <span class="del" onclick="deleteHistory('${h.id}')">削除</span>
         <div class="date">${h.date || ''} ${h.time || ''}</div>
-        <div>${(h.collectors||[]).join('・') || '担当者未記録'}${h.truck ? ' ／ ' + h.truck : ''}</div>
+        <div>${arrLabel(h.collectors)}${h.trucks && h.trucks.length ? ' ／ ' + h.trucks.join('・') : ''}</div>
+        ${h.workContent ? '<div>作業内容: ' + h.workContent + '</div>' : ''}
         <div>${itemsLabel(h.items)}</div>
-        <div>${shuhinLabel(h.shuhinSelected)}</div>
+        <div>${arrLabel(h.shuhinSelected)}</div>
         ${h.notes ? '<div style="color:#666;margin-top:4px;">' + h.notes + '</div>' : ''}
       </div>
     `).join('');
@@ -740,25 +1002,26 @@ function printDetail() {
   const loc = (c.locations || []).find(l => l.id === currentLocId);
   if (!c || !loc) return;
   const w = window.open('', '_blank');
-  w.document.write(`
-    <html><head><meta charset="UTF-8"><title>${c.name}</title>
-    <style>body{font-family:sans-serif;padding:30px;} h1{border-bottom:2px solid #14213D;padding-bottom:8px;}
-    table{border-collapse:collapse;width:100%;margin-top:16px;} td{border:1px solid #ccc;padding:8px 12px;font-size:14px;}
-    td.label{background:#f0f0f0;width:160px;font-weight:bold;}</style></head><body>
-    <h1>${c.name} ${loc.locationName || ''}</h1>
-    <table>
-      <tr><td class="label">住所</td><td>${loc.address || ''}</td></tr>
-      <tr><td class="label">電話</td><td>${loc.phone || ''}</td></tr>
-      <tr><td class="label">担当者(社内)</td><td>${c.staff || ''}</td></tr>
-      <tr><td class="label">取引先の担当者名</td><td>${c.clientContact || ''}</td></tr>
-      <tr><td class="label">マニフェスト</td><td>${manifestLabel(c)}</td></tr>
-      <tr><td class="label">持ち物</td><td>${itemsLabel(c.items)}</td></tr>
-      <tr><td class="label">回収品</td><td>${shuhinLabel(c.shuhinSelected)}</td></tr>
-      <tr><td class="label">備考</td><td>${c.notes || ''}</td></tr>
-    </table>
-    <script>window.print();<\/script>
-    </body></html>
-  `);
+  w.document.write(
+    '<html><head><meta charset="UTF-8"><title>' + c.name + '</title>' +
+    '<style>body{font-family:sans-serif;padding:30px;} h1{border-bottom:2px solid #14213D;padding-bottom:8px;}' +
+    'table{border-collapse:collapse;width:100%;margin-top:16px;} td{border:1px solid #ccc;padding:8px 12px;font-size:14px;}' +
+    'td.label{background:#f0f0f0;width:160px;font-weight:bold;}</style></head><body>' +
+    '<h1>' + c.name + ' ' + (loc.locationName || '') + '</h1>' +
+    '<table>' +
+    '<tr><td class="label">住所</td><td>' + (loc.address || '') + '</td></tr>' +
+    '<tr><td class="label">電話</td><td>' + (loc.phone || '') + '</td></tr>' +
+    '<tr><td class="label">取引先の担当者名</td><td>' + (c.clientContact || '') + '</td></tr>' +
+    '<tr><td class="label">担当者(社内)</td><td>' + (c.staff || '') + '</td></tr>' +
+    '<tr><td class="label">マニフェスト</td><td>' + manifestLabel(c) + '</td></tr>' +
+    '<tr><td class="label">トラック</td><td>' + arrLabel(c.trucks) + '</td></tr>' +
+    '<tr><td class="label">持ち物</td><td>' + itemsLabel(c.items) + '</td></tr>' +
+    '<tr><td class="label">回収品</td><td>' + arrLabel(c.shuhinSelected) + '</td></tr>' +
+    '<tr><td class="label">備考</td><td>' + (c.notes || '') + '</td></tr>' +
+    '</table>' +
+    '<scr' + 'ipt>window.print();<\/scr' + 'ipt>' +
+    '</body></html>'
+  );
   w.document.close();
 }
 
@@ -773,11 +1036,12 @@ function openEditFromDetail() {
   document.getElementById('editStaff').value = c.staff || '';
   document.getElementById('editClientContact').value = c.clientContact || '';
   const mh = c.manifestHas === 'あり' ? 'あり' : 'なし';
-  document.querySelector(`input[name=editManifestHas][value="${mh}"]`).checked = true;
-  document.getElementById('editManifestType').value = c.manifestType || '';
-  document.getElementById('editManifestDisposal').value = c.manifestDisposal || '';
+  document.querySelector('input[name=editManifestHas][value="' + mh + '"]').checked = true;
+  fillMultiCheckboxes('editManifestTypeChecks', manifestTypeList, c.manifestType || []);
+  fillMultiCheckboxes('editManifestDisposalChecks', disposalList, c.manifestDisposal || []);
+  fillMultiCheckboxes('editTruckChecks', truckList, c.trucks || []);
   fillItemsToInputs('edit', c.items);
-  fillShuhinCheckboxes(c.shuhinSelected);
+  fillMultiCheckboxes('editShuhinChecks', shuhinOptions, c.shuhinSelected || []);
   document.getElementById('editNotes').value = c.notes || '';
   document.getElementById('editLocName').value = loc.locationName || '';
   document.getElementById('editLocAddress').value = loc.address || '';
@@ -804,10 +1068,11 @@ function saveEdit() {
     staff: document.getElementById('editStaff').value,
     clientContact: document.getElementById('editClientContact').value.trim(),
     manifestHas: manifestHasEl ? manifestHasEl.value : 'なし',
-    manifestType: document.getElementById('editManifestType').value,
-    manifestDisposal: document.getElementById('editManifestDisposal').value,
+    manifestType: getMultiCheckedValues('editManifestTypeChecks'),
+    manifestDisposal: getMultiCheckedValues('editManifestDisposalChecks'),
+    trucks: getMultiCheckedValues('editTruckChecks'),
     items: readItemsFromInputs('edit'),
-    shuhinSelected: getCheckedValues('editShuhinChecks'),
+    shuhinSelected: getMultiCheckedValues('editShuhinChecks'),
     notes: document.getElementById('editNotes').value.trim(),
     locations: newLocations,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -859,67 +1124,12 @@ function deleteHistory(hid) {
   db.collection('pickupLogs').doc(hid).delete();
 }
 
-function fillTruckSelectOptions() {
-  ['historyTruck','tcTruck'].forEach(id => {
-    const sel = document.getElementById(id);
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">選択なし</option>' + truckList.map(t => `<option value="${t}">${t}</option>`).join('');
-    sel.value = cur;
-  });
-}
-function fillCollectorCheckboxes() {
-  ['historyCollectors','tcCollectors'].forEach(id => {
-    document.getElementById(id).innerHTML = collectorList.length
-      ? collectorList.map(name => `<label><input type="checkbox" class="collectorCk" data-group="${id}" value="${name}"> ${name}</label>`).join('')
-      : '<span style="color:#999;font-size:13px;">設定タブで回収者を追加してください</span>';
-  });
-}
-function fillShuhinCheckboxes(selected) {
-  selected = selected || [];
-  ['newShuhinChecks','editShuhinChecks','historyShuhin','tcShuhin'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.innerHTML = shuhinOptions.length
-      ? shuhinOptions.map(name => `<label><input type="checkbox" class="shuhinCk" data-group="${id}" value="${name}" ${selected.includes(name) ? 'checked' : ''}> ${name}</label>`).join('')
-      : '<span style="color:#999;font-size:13px;">設定タブで回収品を追加してください</span>';
-    updateShuhinButtonLabel(id);
-  });
-}
-const shuhinBtnMap = {
-  newShuhinChecks: 'newShuhinToggleBtn',
-  editShuhinChecks: 'editShuhinToggleBtn',
-  historyShuhin: 'historyShuhinToggleBtn',
-  tcShuhin: 'tcShuhinToggleBtn'
-};
-function toggleShuhinDropdown(panelId) {
-  const panel = document.getElementById(panelId);
-  panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'block' : 'none';
-}
-function updateShuhinButtonLabel(panelId) {
-  const panel = document.getElementById(panelId);
-  const btn = document.getElementById(shuhinBtnMap[panelId]);
-  if (!panel || !btn) return;
-  const checked = Array.from(panel.querySelectorAll('input[type=checkbox]:checked')).map(el => el.value);
-  btn.textContent = (checked.length ? checked.join('・') : '回収品を選択') + ' ▾';
-}
-document.addEventListener('change', (e) => {
-  if (e.target.classList && e.target.classList.contains('shuhinCk')) {
-    updateShuhinButtonLabel(e.target.dataset.group);
-  }
-});
-function getCheckedValues(groupId) {
-  return Array.from(document.querySelectorAll(`#${groupId} input[type=checkbox]:checked`)).map(el => el.value);
-}
-function getCheckedCollectors(groupId) {
-  return Array.from(document.querySelectorAll(`.collectorCk[data-group="${groupId}"]:checked`)).map(el => el.value);
-}
-
 function openManualHistory() {
   document.getElementById('historyDate').value = todayStr();
-  document.getElementById('historyTruck').value = '';
-  fillCollectorCheckboxes();
+  fillMultiCheckboxes('historyTruckChecks', truckList, []);
+  fillMultiCheckboxes('historyCollectorChecks', collectorList, []);
   fillItemsToInputs('h', {});
-  fillShuhinCheckboxes();
+  fillMultiCheckboxes('historyShuhin', shuhinOptions, []);
   document.getElementById('historyNotes').value = '';
   document.getElementById('historyModal').classList.add('show');
 }
@@ -932,74 +1142,101 @@ function saveManualHistory() {
     locationId: currentLocId, locationName: loc.locationName, address: loc.address, phone: loc.phone,
     date: document.getElementById('historyDate').value || todayStr(),
     time: nowTimeStr(),
-    truck: document.getElementById('historyTruck').value,
-    collectors: getCheckedCollectors('historyCollectors'),
+    trucks: getMultiCheckedValues('historyTruckChecks'),
+    collectors: getMultiCheckedValues('historyCollectorChecks'),
     items: readItemsFromInputs('h'),
-    shuhinSelected: getCheckedValues('historyShuhin'),
+    shuhinSelected: getMultiCheckedValues('historyShuhin'),
     notes: document.getElementById('historyNotes').value.trim(),
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   db.collection('pickupLogs').add(data).then(() => closeModal('historyModal')).catch(err => alert('保存に失敗しました: ' + err.message));
 }
 
-function renderTodayList() {
-  const keyword = document.getElementById('searchBox').value.trim();
-  const list = document.getElementById('todayList');
-  const doneLocIds = new Set(todayLogs.map(l => l.locationId));
-  let cards = [];
-  companies.forEach(c => {
-    if (keyword && !(c.name || "").includes(keyword)) return;
-    (c.locations || []).forEach(loc => cards.push({company: c, loc}));
-  });
-  if (cards.length === 0) { list.innerHTML = '<div class="empty">引取先が登録されていません</div>'; return; }
-  list.innerHTML = cards.map(({company, loc}) => {
-    const done = doneLocIds.has(loc.id);
-    return `
-    <div class="card">
-      <h2>${company.name}</h2>
-      <div class="locName">${loc.locationName || ''}</div>
-      <div class="sub">${loc.address || ''}${loc.address && loc.phone ? ' ／ ' : ''}${loc.phone || ''}</div>
-      <div class="tags">
-        <span class="tag">${itemsLabel(company.items)}</span>
-        ${done ? '<span class="tag done">✓ 本日回収済み</span>' : ''}
-      </div>
-      <div class="cardBtnRow">
-        <button class="${done ? 'done' : ''}" onclick="openTodayComplete('${company.id}','${loc.id}')">${done ? 'もう一度記録する' : '回収完了'}</button>
-      </div>
-    </div>
-  `;
-  }).join('');
+const todaySearchBox = document.getElementById('todaySearchBox');
+todaySearchBox.addEventListener('input', renderTodaySuggest);
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#todaySearchBox') && !e.target.closest('#todaySearchSuggest')) {
+    document.getElementById('todaySearchSuggest').classList.remove('show');
+  }
+});
+function renderTodaySuggest() {
+  const keyword = todaySearchBox.value.trim();
+  const box = document.getElementById('todaySearchSuggest');
+  if (!keyword) { box.classList.remove('show'); return; }
+  const matches = companies.filter(c => (c.name||'').includes(keyword)).slice(0,8);
+  if (!matches.length) { box.classList.remove('show'); return; }
+  box.innerHTML = matches.map(c => '<div class="sItem" onclick="selectTodayCompany(\'' + c.id + '\')">' + c.name + '</div>').join('');
+  box.classList.add('show');
 }
-
-function openTodayComplete(companyId, locId) {
-  currentCompanyId = companyId; currentLocId = locId;
+function selectTodayCompany(companyId) {
+  const c = companies.find(x => x.id === companyId);
+  if (!c) return;
+  todaySearchBox.value = c.name;
+  document.getElementById('todaySearchSuggest').classList.remove('show');
+  todayFormCompanyId = companyId;
+  const locs = c.locations || [];
+  if (locs.length === 0) { alert('この会社には拠点が登録されていません'); return; }
+  if (locs.length > 1) {
+    document.getElementById('todayLocSelectWrap').style.display = 'block';
+    const sel = document.getElementById('todayLocSelect');
+    sel.innerHTML = locs.map(l => '<option value="' + l.id + '">' + l.locationName + '</option>').join('');
+    sel.onchange = () => setTodayLocation(companyId, sel.value);
+    setTodayLocation(companyId, locs[0].id);
+  } else {
+    document.getElementById('todayLocSelectWrap').style.display = 'none';
+    setTodayLocation(companyId, locs[0].id);
+  }
+  document.getElementById('todayFormWrap').style.display = 'block';
+}
+function setTodayLocation(companyId, locId) {
   const c = companies.find(x => x.id === companyId);
   const loc = (c.locations || []).find(l => l.id === locId);
-  document.getElementById('tcCompanyName').textContent = c.name;
-  document.getElementById('tcLocName').textContent = loc.locationName || '';
-  document.getElementById('tcTruck').value = '';
-  fillCollectorCheckboxes();
-  fillItemsToInputs('tc', c.items);
-  fillShuhinCheckboxes(c.shuhinSelected);
-  document.getElementById('tcNotes').value = '';
-  document.getElementById('todayCompleteModal').classList.add('show');
+  todayFormCompanyId = companyId; todayFormLocId = locId;
+  document.getElementById('todayFormCompanyName').textContent = c.name;
+  document.getElementById('todayFormLocName').textContent = loc.locationName || '';
+  document.getElementById('todayFormAddress').textContent = loc.address || '未登録';
+  document.getElementById('todayFormPhone').textContent = loc.phone || '未登録';
+  const already = todayLogs.some(l => l.locationId === locId);
+  document.getElementById('todayAlreadyDone').style.display = already ? 'block' : 'none';
+  fillMultiCheckboxes('todayShuhinChecks', shuhinOptions, c.shuhinSelected || []);
+  fillMultiCheckboxes('todayManifestTypeChecks', manifestTypeList, c.manifestType || []);
+  fillMultiCheckboxes('todayManifestDisposalChecks', disposalList, c.manifestDisposal || []);
+  fillMultiCheckboxes('todayTruckChecks', truckList, c.trucks || []);
+  fillMultiCheckboxes('todayCollectorChecks', collectorList, []);
+  document.querySelector('input[name=todayManifestHas][value="' + (c.manifestHas === 'あり' ? 'あり' : 'なし') + '"]').checked = true;
+  document.getElementById('todayWorkContent').value = '';
+  document.getElementById('todayShuhinFreeText').value = '';
+  document.getElementById('todayNotes').value = '';
 }
-
+function cancelTodayForm() {
+  document.getElementById('todayFormWrap').style.display = 'none';
+  todaySearchBox.value = '';
+  todayFormCompanyId = null; todayFormLocId = null;
+}
 function saveTodayComplete() {
-  const c = companies.find(x => x.id === currentCompanyId);
-  const loc = (c.locations || []).find(l => l.id === currentLocId);
+  if (!todayFormCompanyId || !todayFormLocId) { alert('取引先を選択してください'); return; }
+  const c = companies.find(x => x.id === todayFormCompanyId);
+  const loc = (c.locations || []).find(l => l.id === todayFormLocId);
+  const manifestHasEl = document.querySelector('input[name=todayManifestHas]:checked');
   const data = {
-    companyId: currentCompanyId, companyName: c.name,
-    locationId: currentLocId, locationName: loc.locationName, address: loc.address, phone: loc.phone,
+    companyId: todayFormCompanyId, companyName: c.name,
+    locationId: todayFormLocId, locationName: loc.locationName, address: loc.address, phone: loc.phone,
     date: todayStr(), time: nowTimeStr(),
-    truck: document.getElementById('tcTruck').value,
-    collectors: getCheckedCollectors('tcCollectors'),
-    items: readItemsFromInputs('tc'),
-    shuhinSelected: getCheckedValues('tcShuhin'),
-    notes: document.getElementById('tcNotes').value.trim(),
+    workContent: document.getElementById('todayWorkContent').value.trim(),
+    shuhinSelected: getMultiCheckedValues('todayShuhinChecks'),
+    shuhinFreeText: document.getElementById('todayShuhinFreeText').value.trim(),
+    manifestHas: manifestHasEl ? manifestHasEl.value : 'なし',
+    manifestType: getMultiCheckedValues('todayManifestTypeChecks'),
+    manifestDisposal: getMultiCheckedValues('todayManifestDisposalChecks'),
+    trucks: getMultiCheckedValues('todayTruckChecks'),
+    collectors: getMultiCheckedValues('todayCollectorChecks'),
+    items: {},
+    notes: document.getElementById('todayNotes').value.trim(),
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
-  db.collection('pickupLogs').add(data).then(() => closeModal('todayCompleteModal')).catch(err => alert('保存に失敗しました: ' + err.message));
+  db.collection('pickupLogs').add(data).then(() => {
+    cancelTodayForm();
+  }).catch(err => alert('保存に失敗しました: ' + err.message));
 }
 
 function renderTodayHistory() {
@@ -1008,35 +1245,225 @@ function renderTodayHistory() {
   list.innerHTML = todayLogs.map(h => `
     <div class="historyItem">
       <div class="date">${h.time || ''} ／ ${h.companyName || ''} ${h.locationName || ''}</div>
-      <div>${(h.collectors||[]).join('・') || '回収者未記録'}${h.truck ? ' ／ ' + h.truck : ''}</div>
-      <div>${itemsLabel(h.items)}</div>
-      <div>${shuhinLabel(h.shuhinSelected)}</div>
+      <div>${arrLabel(h.collectors)}${h.trucks && h.trucks.length ? ' ／ ' + h.trucks.join('・') : ''}</div>
+      ${h.workContent ? '<div>作業内容: ' + h.workContent + '</div>' : ''}
+      <div>${arrLabel(h.shuhinSelected)}${h.shuhinFreeText ? '(' + h.shuhinFreeText + ')' : ''}</div>
+      ${h.manifestHas === 'あり' ? '<div>マニフェスト:' + (h.manifestType||[]).join('・') + ' / ' + (h.manifestDisposal||[]).join('・') + '</div>' : ''}
       ${h.notes ? '<div style="color:#666;margin-top:4px;">' + h.notes + '</div>' : ''}
     </div>
   `).join('');
 }
 
+let monthlySummaryData = {month:'', rows:[], total:0};
+function showMonthlySummary() {
+  const val = document.getElementById('monthlyPicker').value;
+  if (!val) { alert('月を選択してください'); return; }
+  const start = val + '-01';
+  const parts = val.split('-').map(Number);
+  const y = parts[0], m = parts[1];
+  const lastDay = new Date(y, m, 0).getDate();
+  const end = val + '-' + String(lastDay).padStart(2,'0');
+  db.collection('pickupLogs').where('date','>=',start).where('date','<=',end).get().then(snap => {
+    const logs = [];
+    snap.forEach(d => logs.push(d.data()));
+    renderMonthlySummary(val, logs);
+  }).catch(err => alert('集計に失敗しました: ' + err.message));
+}
+function renderMonthlySummary(month, logs) {
+  const byCompany = {};
+  logs.forEach(l => {
+    const key = l.companyName || '不明';
+    if (!byCompany[key]) byCompany[key] = {count:0, trucks:new Set(), collectors:new Set()};
+    byCompany[key].count++;
+    (l.trucks||[]).forEach(t => byCompany[key].trucks.add(t));
+    (l.collectors||[]).forEach(c => byCompany[key].collectors.add(c));
+  });
+  const rows = Object.keys(byCompany).sort().map(name => ({
+    name, count: byCompany[name].count,
+    trucks: Array.from(byCompany[name].trucks).join('・'),
+    collectors: Array.from(byCompany[name].collectors).join('・')
+  }));
+  monthlySummaryData = {month, rows, total: logs.length};
+  const wrap = document.getElementById('monthlySummaryWrap');
+  wrap.style.display = 'block';
+  const content = document.getElementById('monthlySummaryContent');
+  if (rows.length === 0) { content.innerHTML = '<div class="empty">この月の記録はありません</div>'; return; }
+  content.innerHTML = '<div class="card"><h2>' + month + ' 合計 ' + logs.length + '件</h2></div>' +
+    rows.map(r => '<div class="card"><h2>' + r.name + '</h2><div class="sub">回数: ' + r.count + '件</div>' +
+      (r.trucks ? '<div class="sub">トラック: ' + r.trucks + '</div>' : '') +
+      (r.collectors ? '<div class="sub">担当者: ' + r.collectors + '</div>' : '') +
+      '</div>').join('');
+}
+function closeMonthlySummary() {
+  document.getElementById('monthlySummaryWrap').style.display = 'none';
+  document.getElementById('monthlyPicker').value = '';
+}
+function printMonthlySummary() {
+  const month = monthlySummaryData.month, rows = monthlySummaryData.rows, total = monthlySummaryData.total;
+  const w = window.open('', '_blank');
+  const rowsHtml = rows.map(r => '<tr><td>'+r.name+'</td><td>'+r.count+'</td><td>'+r.trucks+'</td><td>'+r.collectors+'</td></tr>').join('');
+  w.document.write(
+    '<html><head><meta charset="UTF-8"><title>月次集計 ' + month + '</title>' +
+    '<style>body{font-family:sans-serif;padding:30px;} h1{border-bottom:2px solid #14213D;padding-bottom:8px;}' +
+    'table{border-collapse:collapse;width:100%;margin-top:16px;} td,th{border:1px solid #ccc;padding:8px 12px;font-size:14px;text-align:left;}' +
+    'th{background:#f0f0f0;}</style></head><body>' +
+    '<h1>月次集計:' + month + '(合計 ' + total + '件)</h1>' +
+    '<table><tr><th>取引先</th><th>回数</th><th>トラック</th><th>担当者</th></tr>' + rowsHtml + '</table>' +
+    '<scr' + 'ipt>window.print();<\/scr' + 'ipt>' +
+    '</body></html>'
+  );
+  w.document.close();
+}
+
+function openAddSchedule() {
+  document.getElementById('schedDate').value = todayStr();
+  document.getElementById('schedSearchBox').value = '';
+  document.getElementById('schedClientContact').value = '';
+  document.getElementById('schedAddress').textContent = '';
+  document.getElementById('schedPhone').textContent = '';
+  document.getElementById('schedContent').value = '';
+  document.getElementById('schedNotes').value = '';
+  document.getElementById('schedLocSelectWrap').style.display = 'none';
+  fillMultiCheckboxes('schedTruckChecks', truckList, []);
+  fillMultiCheckboxes('schedCollectorChecks', collectorList, []);
+  schedCompanyId = null; schedLocId = null;
+  document.getElementById('scheduleModal').classList.add('show');
+}
+const schedSearchBox = document.getElementById('schedSearchBox');
+schedSearchBox.addEventListener('input', renderSchedSuggest);
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#schedSearchBox') && !e.target.closest('#schedSearchSuggest')) {
+    document.getElementById('schedSearchSuggest').classList.remove('show');
+  }
+});
+function renderSchedSuggest() {
+  const keyword = schedSearchBox.value.trim();
+  const box = document.getElementById('schedSearchSuggest');
+  if (!keyword) { box.classList.remove('show'); return; }
+  const matches = companies.filter(c => (c.name||'').includes(keyword)).slice(0,8);
+  if (!matches.length) { box.classList.remove('show'); return; }
+  box.innerHTML = matches.map(c => '<div class="sItem" onclick="selectSchedCompany(\'' + c.id + '\')">' + c.name + '</div>').join('');
+  box.classList.add('show');
+}
+function selectSchedCompany(companyId) {
+  const c = companies.find(x => x.id === companyId);
+  if (!c) return;
+  schedSearchBox.value = c.name;
+  document.getElementById('schedSearchSuggest').classList.remove('show');
+  document.getElementById('schedClientContact').value = c.clientContact || '';
+  schedCompanyId = companyId;
+  const locs = c.locations || [];
+  if (locs.length === 0) { alert('この会社には拠点が登録されていません'); return; }
+  if (locs.length > 1) {
+    document.getElementById('schedLocSelectWrap').style.display = 'block';
+    const sel = document.getElementById('schedLocSelect');
+    sel.innerHTML = locs.map(l => '<option value="' + l.id + '">' + l.locationName + '</option>').join('');
+    sel.onchange = () => setSchedLocation(companyId, sel.value);
+    setSchedLocation(companyId, locs[0].id);
+  } else {
+    document.getElementById('schedLocSelectWrap').style.display = 'none';
+    setSchedLocation(companyId, locs[0].id);
+  }
+}
+function setSchedLocation(companyId, locId) {
+  const c = companies.find(x => x.id === companyId);
+  const loc = (c.locations || []).find(l => l.id === locId);
+  schedLocId = locId;
+  document.getElementById('schedAddress').textContent = loc.address || '未登録';
+  document.getElementById('schedPhone').textContent = loc.phone || '未登録';
+}
+function saveSchedule() {
+  if (!schedCompanyId || !schedLocId) { alert('取引先を選択してください'); return; }
+  const date = document.getElementById('schedDate').value;
+  if (!date) { alert('日付を入力してください'); return; }
+  const c = companies.find(x => x.id === schedCompanyId);
+  const loc = (c.locations || []).find(l => l.id === schedLocId);
+  const data = {
+    date,
+    companyId: schedCompanyId, companyName: c.name,
+    locationId: schedLocId, locationName: loc.locationName, address: loc.address, phone: loc.phone,
+    clientContact: document.getElementById('schedClientContact').value.trim(),
+    content: document.getElementById('schedContent').value.trim(),
+    trucks: getMultiCheckedValues('schedTruckChecks'),
+    collectors: getMultiCheckedValues('schedCollectorChecks'),
+    notes: document.getElementById('schedNotes').value.trim(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  db.collection('pickupSchedule').add(data).then(() => closeModal('scheduleModal')).catch(err => alert('保存に失敗しました: ' + err.message));
+}
+function renderScheduleList() {
+  const list = document.getElementById('scheduleList');
+  if (!list) return;
+  if (scheduleItems.length === 0) { list.innerHTML = '<div class="empty">回収予定はまだありません</div>'; return; }
+  list.innerHTML = scheduleItems.map(s => `
+    <div class="card">
+      <h2>${s.date} ${s.companyName}</h2>
+      <div class="locName">${s.locationName || ''}</div>
+      <div class="sub">${s.address || ''}${s.address && s.phone ? ' ／ ' : ''}${s.phone || ''}</div>
+      ${s.clientContact ? '<div class="sub">先方担当者: ' + s.clientContact + '</div>' : ''}
+      <div class="tags">
+        ${s.content ? '<span class="tag">' + s.content + '</span>' : ''}
+        ${(s.trucks && s.trucks.length) ? '<span class="tag">' + s.trucks.join('・') + '</span>' : ''}
+        ${(s.collectors && s.collectors.length) ? '<span class="tag">' + s.collectors.join('・') + '</span>' : ''}
+      </div>
+      ${s.notes ? '<div class="sub">' + s.notes + '</div>' : ''}
+      <div class="btnrow">
+        <button class="ghost" onclick="printSchedule('${s.id}')">印刷</button>
+        <button class="danger" onclick="deleteSchedule('${s.id}')">削除</button>
+      </div>
+    </div>
+  `).join('');
+}
+function deleteSchedule(id) {
+  if (!confirm('この回収予定を削除しますか?')) return;
+  db.collection('pickupSchedule').doc(id).delete();
+}
+function printSchedule(id) {
+  const s = scheduleItems.find(x => x.id === id);
+  if (!s) return;
+  const w = window.open('', '_blank');
+  w.document.write(
+    '<html><head><meta charset="UTF-8"><title>回収予定 ' + s.companyName + '</title>' +
+    '<style>body{font-family:sans-serif;padding:30px;} h1{border-bottom:2px solid #14213D;padding-bottom:8px;}' +
+    'table{border-collapse:collapse;width:100%;margin-top:16px;} td{border:1px solid #ccc;padding:8px 12px;font-size:14px;}' +
+    'td.label{background:#f0f0f0;width:160px;font-weight:bold;}</style></head><body>' +
+    '<h1>回収予定:' + s.date + ' ' + s.companyName + ' ' + (s.locationName || '') + '</h1>' +
+    '<table>' +
+    '<tr><td class="label">住所</td><td>' + (s.address || '') + '</td></tr>' +
+    '<tr><td class="label">電話</td><td>' + (s.phone || '') + '</td></tr>' +
+    '<tr><td class="label">取引先担当者</td><td>' + (s.clientContact || '') + '</td></tr>' +
+    '<tr><td class="label">回収内容</td><td>' + (s.content || '') + '</td></tr>' +
+    '<tr><td class="label">トラック</td><td>' + (s.trucks||[]).join('・') + '</td></tr>' +
+    '<tr><td class="label">担当者</td><td>' + (s.collectors||[]).join('・') + '</td></tr>' +
+    '<tr><td class="label">備考</td><td>' + (s.notes || '') + '</td></tr>' +
+    '</table>' +
+    '<scr' + 'ipt>window.print();<\/scr' + 'ipt>' +
+    '</body></html>'
+  );
+  w.document.close();
+}
+
 function renderSettings() {
   const staffDiv = document.getElementById('staffChips');
-  if (staffDiv) staffDiv.innerHTML = staffList.length ? staffList.map(t => `<span class="chip">${t} <span class="x" onclick="removeStaff('${t}')">✕</span></span>`).join('')
+  if (staffDiv) staffDiv.innerHTML = staffList.length ? staffList.map(t => '<span class="chip">' + t + ' <span class="x" onclick="removeStaff(\'' + t + '\')">✕</span></span>').join('')
     : '<span style="color:#999;font-size:14px;">まだ登録されていません</span>';
 
   const mtDiv = document.getElementById('manifestTypeChips');
-  if (mtDiv) mtDiv.innerHTML = manifestTypeList.length ? manifestTypeList.map(t => `<span class="chip">${t} <span class="x" onclick="removeManifestType('${t}')">✕</span></span>`).join('')
+  if (mtDiv) mtDiv.innerHTML = manifestTypeList.length ? manifestTypeList.map(t => '<span class="chip">' + t + ' <span class="x" onclick="removeManifestType(\'' + t + '\')">✕</span></span>').join('')
     : '<span style="color:#999;font-size:14px;">まだ登録されていません</span>';
 
   const dpDiv = document.getElementById('disposalChips');
-  if (dpDiv) dpDiv.innerHTML = disposalList.length ? disposalList.map(t => `<span class="chip">${t} <span class="x" onclick="removeDisposal('${t}')">✕</span></span>`).join('')
+  if (dpDiv) dpDiv.innerHTML = disposalList.length ? disposalList.map(t => '<span class="chip">' + t + ' <span class="x" onclick="removeDisposal(\'' + t + '\')">✕</span></span>').join('')
     : '<span style="color:#999;font-size:14px;">まだ登録されていません</span>';
 
   const truckDiv = document.getElementById('truckChips');
-  truckDiv.innerHTML = truckList.length ? truckList.map(t => `<span class="chip">${t} <span class="x" onclick="removeTruck('${t}')">✕</span></span>`).join('')
+  truckDiv.innerHTML = truckList.length ? truckList.map(t => '<span class="chip">' + t + ' <span class="x" onclick="removeTruck(\'' + t + '\')">✕</span></span>').join('')
     : '<span style="color:#999;font-size:14px;">まだ登録されていません</span>';
   const colDiv = document.getElementById('collectorChips');
-  colDiv.innerHTML = collectorList.length ? collectorList.map(n => `<span class="chip">${n} <span class="x" onclick="removeCollector('${n}')">✕</span></span>`).join('')
+  colDiv.innerHTML = collectorList.length ? collectorList.map(n => '<span class="chip">' + n + ' <span class="x" onclick="removeCollector(\'' + n + '\')">✕</span></span>').join('')
     : '<span style="color:#999;font-size:14px;">まだ登録されていません</span>';
   const shDiv = document.getElementById('shuhinChips');
-  shDiv.innerHTML = shuhinOptions.length ? shuhinOptions.map(n => `<span class="chip">${n} <span class="x" onclick="removeShuhin('${n}')">✕</span></span>`).join('')
+  shDiv.innerHTML = shuhinOptions.length ? shuhinOptions.map(n => '<span class="chip">' + n + ' <span class="x" onclick="removeShuhin(\'' + n + '\')">✕</span></span>').join('')
     : '<span style="color:#999;font-size:14px;">まだ登録されていません</span>';
 }
 
@@ -1076,6 +1503,7 @@ const removeDisposal = makeListRemover('disposalSites', () => disposalList);
 const removeTruck = makeListRemover('truckList', () => truckList);
 const removeCollector = makeListRemover('collectorList', () => collectorList);
 const removeShuhin = makeListRemover('shuhinOptions', () => shuhinOptions);
+showHomeView();
 </script>
 </body>
 </html>

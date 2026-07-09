@@ -548,7 +548,8 @@
 <div class="overlay" id="scheduleModal">
   <div class="sheet">
     <div class="closeBtn" onclick="closeModal('scheduleModal')">閉じる ✕</div>
-    <h2>回収予定を登録</h2>
+    <h2 id="scheduleModalTitle">回収予定を登録</h2>
+    <input type="hidden" id="editScheduleId" value="">
     <label>日付</label>
     <input type="date" id="schedDate">
     <label>取引先</label>
@@ -603,6 +604,29 @@
     </div>
     <div class="btnrow">
       <button class="primary" onclick="closeModal('scheduleDoneModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 回収予定 詳細 -->
+<div class="overlay" id="scheduleDetailModal">
+  <div class="sheet">
+    <div class="closeBtn" onclick="closeModal('scheduleDetailModal')">閉じる ✕</div>
+    <h2 id="schedDetailTitle"></h2>
+    <div class="detailRow"><div class="label">住所</div><div id="schedDetailAddress"></div></div>
+    <div class="detailRow"><div class="label">電話</div><div id="schedDetailPhone"></div></div>
+    <div class="detailRow"><div class="label">取引先担当者</div><div id="schedDetailContact"></div></div>
+    <div class="detailRow"><div class="label">回収内容</div><div id="schedDetailContent"></div></div>
+    <div class="detailRow"><div class="label">トラック</div><div id="schedDetailTruck"></div></div>
+    <div class="detailRow"><div class="label">担当者</div><div id="schedDetailCollectors"></div></div>
+    <div class="detailRow"><div class="label">備考</div><div id="schedDetailNotes"></div></div>
+    <div class="btnrow">
+      <button class="secondary" onclick="openEditScheduleFromDetail()">編集</button>
+      <button class="ghost" onclick="printScheduleFromDetail()">印刷</button>
+    </div>
+    <div class="btnrow">
+      <button class="ghost" onclick="shareScheduleFromDetailToLine()">LINEへ送る</button>
+      <button class="danger" onclick="deleteScheduleFromDetail()">削除</button>
     </div>
   </div>
 </div>
@@ -1421,6 +1445,8 @@ function printMonthlySummary() {
 }
 
 function openAddSchedule() {
+  document.getElementById('scheduleModalTitle').textContent = '回収予定を登録';
+  document.getElementById('editScheduleId').value = '';
   document.getElementById('schedDate').value = todayStr();
   document.getElementById('schedSearchBox').value = '';
   document.getElementById('schedClientContact').value = '';
@@ -1493,11 +1519,15 @@ function saveSchedule() {
     content: document.getElementById('schedContent').value.trim(),
     trucks: getMultiCheckedValues('schedTruckChecks'),
     collectors: getMultiCheckedValues('schedCollectorChecks'),
-    notes: document.getElementById('schedNotes').value.trim(),
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    notes: document.getElementById('schedNotes').value.trim()
   };
-  db.collection('pickupSchedule').add(data).then(() => {
+  const editId = document.getElementById('editScheduleId').value;
+  const promise = editId
+    ? db.collection('pickupSchedule').doc(editId).update(data)
+    : db.collection('pickupSchedule').add({...data, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+  promise.then(() => {
     closeModal('scheduleModal');
+    if (editId) return;
     lastScheduleData = data;
     document.getElementById('scheduleDoneSummary').innerHTML =
       '<div class="confirmRow"><div class="label">日付</div><div class="val">' + data.date + '</div></div>' +
@@ -1518,7 +1548,21 @@ function buildScheduleLineText(s) {
     '\n備考:' + (s.notes || 'なし');
 }
 function shareScheduleToLine(s) {
-  window.open('https://line.me/R/msg/text/?' + encodeURIComponent(buildScheduleLineText(s)), '_blank');
+  const text = buildScheduleLineText(s);
+  const lineUrl = 'https://line.me/R/msg/text/?' + encodeURIComponent(text);
+  const w = window.open('', '_blank');
+  w.document.write(
+    '<html><head><meta charset="UTF-8"><title>LINEへ送る</title>' +
+    '<style>body{font-family:sans-serif;padding:24px;background:#f5f5f5;} pre{white-space:pre-wrap;background:white;padding:14px;border-radius:8px;font-size:14px;border:1px solid #ddd;}' +
+    'a.btn{display:block;text-align:center;background:#06C755;color:white;padding:14px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px;}' +
+    'button.closeBtn2{width:100%;padding:14px;border:none;border-radius:8px;background:#eee;color:#333;font-size:15px;margin-top:10px;}</style></head><body>' +
+    '<h2>LINEへ送る内容</h2>' +
+    '<pre>' + text.replace(/</g,'&lt;') + '</pre>' +
+    '<a class="btn" href="' + lineUrl + '">LINEを開く</a>' +
+    '<button class="closeBtn2" onclick="window.close()">このページを閉じる</button>' +
+    '</body></html>'
+  );
+  w.document.close();
 }
 function printScheduleData(s) {
   const w = window.open('', '_blank');
@@ -1555,7 +1599,7 @@ function renderScheduleList() {
   if (!list) return;
   if (scheduleItems.length === 0) { list.innerHTML = '<div class="empty">回収予定はまだありません</div>'; return; }
   list.innerHTML = scheduleItems.map(s => `
-    <div class="card">
+    <div class="card" onclick="openScheduleDetail('${s.id}')">
       <h2>${s.date} ${s.companyName}</h2>
       <div class="locName">${s.locationName || ''}</div>
       <div class="sub">${s.address || ''}${s.address && s.phone ? ' ／ ' : ''}${s.phone || ''}</div>
@@ -1566,13 +1610,55 @@ function renderScheduleList() {
         ${(s.collectors && s.collectors.length) ? '<span class="tag">' + s.collectors.join('・') + '</span>' : ''}
       </div>
       ${s.notes ? '<div class="sub">' + s.notes + '</div>' : ''}
-      <div class="btnrow">
-        <button class="ghost" onclick="printSchedule('${s.id}')">印刷</button>
-        <button class="ghost" onclick="shareScheduleToLineById('${s.id}')">LINEへ送る</button>
-        <button class="danger" onclick="deleteSchedule('${s.id}')">削除</button>
-      </div>
     </div>
   `).join('');
+}
+let currentScheduleId = null;
+function openScheduleDetail(id) {
+  const s = scheduleItems.find(x => x.id === id);
+  if (!s) return;
+  currentScheduleId = id;
+  document.getElementById('schedDetailTitle').textContent = s.date + ' ' + s.companyName + ' ' + (s.locationName || '');
+  document.getElementById('schedDetailAddress').textContent = s.address || 'なし';
+  document.getElementById('schedDetailPhone').textContent = s.phone || 'なし';
+  document.getElementById('schedDetailContact').textContent = s.clientContact || 'なし';
+  document.getElementById('schedDetailContent').textContent = s.content || 'なし';
+  document.getElementById('schedDetailTruck').textContent = arrLabel(s.trucks);
+  document.getElementById('schedDetailCollectors').textContent = arrLabel(s.collectors);
+  document.getElementById('schedDetailNotes').textContent = s.notes || 'なし';
+  document.getElementById('scheduleDetailModal').classList.add('show');
+}
+function printScheduleFromDetail() {
+  const s = scheduleItems.find(x => x.id === currentScheduleId);
+  if (s) printScheduleData(s);
+}
+function shareScheduleFromDetailToLine() {
+  const s = scheduleItems.find(x => x.id === currentScheduleId);
+  if (s) shareScheduleToLine(s);
+}
+function deleteScheduleFromDetail() {
+  if (!currentScheduleId) return;
+  if (!confirm('この回収予定を削除しますか?')) return;
+  db.collection('pickupSchedule').doc(currentScheduleId).delete().then(() => closeModal('scheduleDetailModal'));
+}
+function openEditScheduleFromDetail() {
+  const s = scheduleItems.find(x => x.id === currentScheduleId);
+  if (!s) return;
+  closeModal('scheduleDetailModal');
+  document.getElementById('scheduleModalTitle').textContent = '回収予定を編集';
+  document.getElementById('editScheduleId').value = s.id;
+  document.getElementById('schedDate').value = s.date || '';
+  document.getElementById('schedSearchBox').value = s.companyName || '';
+  document.getElementById('schedClientContact').value = s.clientContact || '';
+  document.getElementById('schedAddress').value = s.address || '';
+  document.getElementById('schedPhone').value = s.phone || '';
+  document.getElementById('schedContent').value = s.content || '';
+  document.getElementById('schedNotes').value = s.notes || '';
+  document.getElementById('schedLocSelectWrap').style.display = 'none';
+  schedCompanyId = s.companyId; schedLocId = s.locationId;
+  fillMultiCheckboxes('schedTruckChecks', truckList, s.trucks || []);
+  fillMultiCheckboxes('schedCollectorChecks', collectorList, s.collectors || []);
+  document.getElementById('scheduleModal').classList.add('show');
 }
 function deleteSchedule(id) {
   if (!confirm('この回収予定を削除しますか?')) return;

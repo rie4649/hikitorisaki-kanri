@@ -242,7 +242,10 @@
 <div class="section" id="section-settings">
   <button class="settingsAddBtn" onclick="openAddCompany()">＋ 取引先(会社)を新規登録</button>
 
-  <h3 style="border-top:none;margin-top:0;">担当者一覧(社内)</h3>
+  <h3 style="border-top:none;margin-top:0;">よみがな未登録の取引先</h3>
+  <div id="yomiganaMissingList"></div>
+
+  <h3>担当者一覧(社内)</h3>
   <div id="staffChips"></div>
   <div class="addRow">
     <input type="text" id="newStaffInput" placeholder="例:川村">
@@ -972,7 +975,27 @@ db.collection('companies').orderBy('name').onSnapshot(snapshot => {
   companies = [];
   snapshot.forEach(doc => companies.push({id: doc.id, ...doc.data()}));
   renderAll();
+  renderYomiganaMissingList();
 });
+function renderYomiganaMissingList() {
+  const div = document.getElementById('yomiganaMissingList');
+  if (!div) return;
+  const missing = companies.filter(c => !(c.yomigana && c.yomigana.trim()));
+  if (missing.length === 0) { div.innerHTML = '<span style="color:#999;font-size:14px;">すべて登録済みです</span>'; return; }
+  div.innerHTML = missing.map(c => `
+    <div class="chip" style="flex-wrap:wrap;">
+      <span style="flex:0 0 100%;font-weight:bold;margin-bottom:6px;">${c.name}</span>
+      <input type="text" id="yomiganaInput_${c.id}" placeholder="よみがな(ひらがな)で入力" style="flex:1;">
+      <button type="button" onclick="saveYomiganaQuick('${c.id}')" style="border:none;background:#14213D;color:white;border-radius:6px;padding:8px 14px;margin-left:8px;">保存</button>
+    </div>
+  `).join('');
+}
+function saveYomiganaQuick(companyId) {
+  const input = document.getElementById('yomiganaInput_' + companyId);
+  const val = input.value.trim();
+  if (!val) { alert('よみがなを入力してください'); return; }
+  db.collection('companies').doc(companyId).update({yomigana: val}).catch(err => alert('保存に失敗しました: ' + err.message));
+}
 
 db.collection('pickupLogs').where('date', '==', todayStr()).onSnapshot(snapshot => {
   todayLogs = [];

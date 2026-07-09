@@ -90,8 +90,8 @@
   .historyItem .del { color: #c0392b; font-size: 12px; float: right; }
   .closeBtn { text-align: right; font-size: 14px; color: #666; margin-bottom: 6px; }
   .empty { text-align: center; color: #999; padding: 40px 0; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; background: #e8ecf3; color: #14213D; padding: 6px 10px; border-radius: 16px; font-size: 14px; margin: 4px 6px 0 0; }
-  .chip .x { cursor: pointer; color: #c0392b; font-weight: bold; }
+  .chip { display: flex; align-items: center; justify-content: space-between; background: white; color: #222; padding: 12px 14px; border-radius: 8px; font-size: 15px; margin: 0 0 8px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .chip .x { cursor: pointer; color: #c0392b; font-size: 13px; border: 1px solid #c0392b; padding: 4px 10px; border-radius: 6px; }
   .addRow { display: flex; gap: 8px; margin-top: 10px; }
   .addRow input { flex: 1; }
   .addRow button { padding: 10px 16px; border: none; border-radius: 8px; background: #14213D; color: white; }
@@ -109,7 +109,10 @@
 <body>
 
 <header>
-  <h1 id="headerTitle">🏢 取引先管理</h1>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <h1 id="headerTitle" style="margin:0;">🏢 取引先管理</h1>
+    <button id="installBtn" style="background:white;color:#14213D;border:none;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:bold;white-space:nowrap;">📲 アプリ追加</button>
+  </div>
   <div id="searchWrap" style="display:none;">
     <input id="searchBox" type="text" placeholder="会社名で検索(1文字から候補が出ます)" autocomplete="off">
     <div id="searchSuggest"></div>
@@ -214,6 +217,7 @@
 
       <div class="btnrow">
         <button class="secondary" onclick="cancelTodayForm()">キャンセル</button>
+        <button class="ghost" onclick="printTodayForm()">印刷</button>
         <button class="primary" onclick="saveTodayComplete()">回収完了として保存</button>
       </div>
     </div>
@@ -232,6 +236,9 @@
       <button class="primary" onclick="printMonthlySummary()">印刷</button>
     </div>
     <h3 style="border-top:none;">今日の記録</h3>
+  </div>
+  <div class="btnrow" style="margin-top:0;">
+    <button class="ghost" onclick="printTodayHistory()" style="flex:1;">本日の記録を印刷</button>
   </div>
   <div id="todayHistoryList"></div>
 </div>
@@ -555,8 +562,14 @@
     </div>
     <label>取引先担当者</label>
     <input type="text" id="schedClientContact">
-    <div class="detailRow"><div class="label">住所</div><div id="schedAddress"></div></div>
-    <div class="detailRow"><div class="label">電話</div><div id="schedPhone"></div></div>
+    <h3 style="border-top:none;">拠点の情報</h3>
+    <label>住所</label>
+    <div class="addrRow">
+      <input type="text" id="schedAddress">
+      <button type="button" class="mapBtn" onclick="openMap('schedAddress')">地図で確認</button>
+    </div>
+    <label>電話</label>
+    <input type="tel" id="schedPhone">
     <label>回収内容</label>
     <textarea id="schedContent" placeholder="例:ドラム回収予定"></textarea>
     <label>トラック(複数可)</label>
@@ -578,6 +591,22 @@
   </div>
 </div>
 
+<!-- 回収予定 登録しました -->
+<div class="overlay" id="scheduleDoneModal">
+  <div class="sheet">
+    <div class="closeBtn" onclick="closeModal('scheduleDoneModal')">閉じる ✕</div>
+    <h2>登録しました</h2>
+    <div id="scheduleDoneSummary"></div>
+    <div class="btnrow">
+      <button class="ghost" onclick="printScheduleFromDone()">印刷する</button>
+      <button class="ghost" onclick="shareScheduleFromDoneToLine()">LINEへ送る</button>
+    </div>
+    <div class="btnrow">
+      <button class="primary" onclick="closeModal('scheduleDoneModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
@@ -593,6 +622,25 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+let deferredInstallPrompt = null;
+const installBtn = document.getElementById('installBtn');
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+installBtn.addEventListener('click', async () => {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+  } else {
+    alert('iPhoneの場合:画面下(または上)の共有ボタン(□に↑)をタップ→「ホーム画面に追加」を選んでください。\n\nAndroid/パソコンの場合:このボタンを押すとインストール確認が出るはずです。出ない場合はブラウザの「…」メニューから「アプリをインストール」を選んでください。');
+  }
+});
+window.addEventListener('appinstalled', () => {
+  installBtn.style.display = 'none';
+});
+
 let companies = [];
 let todayLogs = [];
 let truckList = [];
@@ -607,6 +655,7 @@ let activeTab = 'clients';
 let todayFormCompanyId = null, todayFormLocId = null;
 let schedCompanyId = null, schedLocId = null;
 let scheduleItems = [];
+let lastScheduleData = null;
 
 function todayStr() {
   const d = new Date();
@@ -1213,6 +1262,42 @@ function cancelTodayForm() {
   todaySearchBox.value = '';
   todayFormCompanyId = null; todayFormLocId = null;
 }
+function printTodayForm() {
+  if (!todayFormCompanyId || !todayFormLocId) { alert('取引先を選択してください'); return; }
+  const c = companies.find(x => x.id === todayFormCompanyId);
+  const loc = (c.locations || []).find(l => l.id === todayFormLocId);
+  const manifestHasEl = document.querySelector('input[name=todayManifestHas]:checked');
+  const workContent = document.getElementById('todayWorkContent').value.trim();
+  const shuhinSelected = getMultiCheckedValues('todayShuhinChecks');
+  const shuhinFreeText = document.getElementById('todayShuhinFreeText').value.trim();
+  const manifestHas = manifestHasEl ? manifestHasEl.value : 'なし';
+  const manifestType = getMultiCheckedValues('todayManifestTypeChecks');
+  const manifestDisposal = getMultiCheckedValues('todayManifestDisposalChecks');
+  const trucks = getMultiCheckedValues('todayTruckChecks');
+  const collectors = getMultiCheckedValues('todayCollectorChecks');
+  const notes = document.getElementById('todayNotes').value.trim();
+  const w = window.open('', '_blank');
+  w.document.write(
+    '<html><head><meta charset="UTF-8"><title>本日の回収 ' + c.name + '</title>' +
+    '<style>body{font-family:sans-serif;padding:30px;} h1{border-bottom:2px solid #14213D;padding-bottom:8px;}' +
+    'table{border-collapse:collapse;width:100%;margin-top:16px;} td{border:1px solid #ccc;padding:8px 12px;font-size:14px;}' +
+    'td.label{background:#f0f0f0;width:160px;font-weight:bold;}</style></head><body>' +
+    '<h1>' + todayStr() + ' ' + c.name + ' ' + (loc.locationName || '') + '</h1>' +
+    '<table>' +
+    '<tr><td class="label">住所</td><td>' + (loc.address || '') + '</td></tr>' +
+    '<tr><td class="label">電話</td><td>' + (loc.phone || '') + '</td></tr>' +
+    '<tr><td class="label">作業内容</td><td>' + workContent + '</td></tr>' +
+    '<tr><td class="label">回収物</td><td>' + arrLabel(shuhinSelected) + (shuhinFreeText ? '(' + shuhinFreeText + ')' : '') + '</td></tr>' +
+    '<tr><td class="label">マニフェスト</td><td>' + (manifestHas === 'あり' ? 'あり ' + manifestType.join('・') + ' / 処分先:' + manifestDisposal.join('・') : 'なし') + '</td></tr>' +
+    '<tr><td class="label">トラック</td><td>' + arrLabel(trucks) + '</td></tr>' +
+    '<tr><td class="label">担当者</td><td>' + arrLabel(collectors) + '</td></tr>' +
+    '<tr><td class="label">備考</td><td>' + notes + '</td></tr>' +
+    '</table>' +
+    '<scr' + 'ipt>window.print();<\/scr' + 'ipt>' +
+    '</body></html>'
+  );
+  w.document.close();
+}
 function saveTodayComplete() {
   if (!todayFormCompanyId || !todayFormLocId) { alert('取引先を選択してください'); return; }
   const c = companies.find(x => x.id === todayFormCompanyId);
@@ -1252,6 +1337,26 @@ function renderTodayHistory() {
       ${h.notes ? '<div style="color:#666;margin-top:4px;">' + h.notes + '</div>' : ''}
     </div>
   `).join('');
+}
+function printTodayHistory() {
+  if (todayLogs.length === 0) { alert('本日の記録がありません'); return; }
+  const rowsHtml = todayLogs.map(h =>
+    '<tr><td>' + (h.time||'') + '</td><td>' + (h.companyName||'') + ' ' + (h.locationName||'') + '</td><td>' +
+    arrLabel(h.trucks) + '</td><td>' + arrLabel(h.collectors) + '</td><td>' +
+    arrLabel(h.shuhinSelected) + (h.shuhinFreeText ? '(' + h.shuhinFreeText + ')' : '') + '</td><td>' + (h.notes||'') + '</td></tr>'
+  ).join('');
+  const w = window.open('', '_blank');
+  w.document.write(
+    '<html><head><meta charset="UTF-8"><title>本日の記録 ' + todayStr() + '</title>' +
+    '<style>body{font-family:sans-serif;padding:30px;} h1{border-bottom:2px solid #14213D;padding-bottom:8px;}' +
+    'table{border-collapse:collapse;width:100%;margin-top:16px;} td,th{border:1px solid #ccc;padding:8px 12px;font-size:13px;text-align:left;}' +
+    'th{background:#f0f0f0;}</style></head><body>' +
+    '<h1>本日の記録:' + todayStr() + '(合計 ' + todayLogs.length + '件)</h1>' +
+    '<table><tr><th>時刻</th><th>取引先</th><th>トラック</th><th>担当者</th><th>回収物</th><th>備考</th></tr>' + rowsHtml + '</table>' +
+    '<scr' + 'ipt>window.print();<\/scr' + 'ipt>' +
+    '</body></html>'
+  );
+  w.document.close();
 }
 
 let monthlySummaryData = {month:'', rows:[], total:0};
@@ -1319,8 +1424,8 @@ function openAddSchedule() {
   document.getElementById('schedDate').value = todayStr();
   document.getElementById('schedSearchBox').value = '';
   document.getElementById('schedClientContact').value = '';
-  document.getElementById('schedAddress').textContent = '';
-  document.getElementById('schedPhone').textContent = '';
+  document.getElementById('schedAddress').value = '';
+  document.getElementById('schedPhone').value = '';
   document.getElementById('schedContent').value = '';
   document.getElementById('schedNotes').value = '';
   document.getElementById('schedLocSelectWrap').style.display = 'none';
@@ -1369,8 +1474,8 @@ function setSchedLocation(companyId, locId) {
   const c = companies.find(x => x.id === companyId);
   const loc = (c.locations || []).find(l => l.id === locId);
   schedLocId = locId;
-  document.getElementById('schedAddress').textContent = loc.address || '未登録';
-  document.getElementById('schedPhone').textContent = loc.phone || '未登録';
+  document.getElementById('schedAddress').value = loc.address || '';
+  document.getElementById('schedPhone').value = loc.phone || '';
 }
 function saveSchedule() {
   if (!schedCompanyId || !schedLocId) { alert('取引先を選択してください'); return; }
@@ -1381,7 +1486,9 @@ function saveSchedule() {
   const data = {
     date,
     companyId: schedCompanyId, companyName: c.name,
-    locationId: schedLocId, locationName: loc.locationName, address: loc.address, phone: loc.phone,
+    locationId: schedLocId, locationName: loc.locationName,
+    address: document.getElementById('schedAddress').value.trim(),
+    phone: document.getElementById('schedPhone').value.trim(),
     clientContact: document.getElementById('schedClientContact').value.trim(),
     content: document.getElementById('schedContent').value.trim(),
     trucks: getMultiCheckedValues('schedTruckChecks'),
@@ -1389,38 +1496,31 @@ function saveSchedule() {
     notes: document.getElementById('schedNotes').value.trim(),
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
-  db.collection('pickupSchedule').add(data).then(() => closeModal('scheduleModal')).catch(err => alert('保存に失敗しました: ' + err.message));
+  db.collection('pickupSchedule').add(data).then(() => {
+    closeModal('scheduleModal');
+    lastScheduleData = data;
+    document.getElementById('scheduleDoneSummary').innerHTML =
+      '<div class="confirmRow"><div class="label">日付</div><div class="val">' + data.date + '</div></div>' +
+      '<div class="confirmRow"><div class="label">取引先</div><div class="val">' + data.companyName + ' ' + (data.locationName || '') + '</div></div>' +
+      '<div class="confirmRow"><div class="label">回収内容</div><div class="val">' + (data.content || 'なし') + '</div></div>';
+    document.getElementById('scheduleDoneModal').classList.add('show');
+  }).catch(err => alert('保存に失敗しました: ' + err.message));
 }
-function renderScheduleList() {
-  const list = document.getElementById('scheduleList');
-  if (!list) return;
-  if (scheduleItems.length === 0) { list.innerHTML = '<div class="empty">回収予定はまだありません</div>'; return; }
-  list.innerHTML = scheduleItems.map(s => `
-    <div class="card">
-      <h2>${s.date} ${s.companyName}</h2>
-      <div class="locName">${s.locationName || ''}</div>
-      <div class="sub">${s.address || ''}${s.address && s.phone ? ' ／ ' : ''}${s.phone || ''}</div>
-      ${s.clientContact ? '<div class="sub">先方担当者: ' + s.clientContact + '</div>' : ''}
-      <div class="tags">
-        ${s.content ? '<span class="tag">' + s.content + '</span>' : ''}
-        ${(s.trucks && s.trucks.length) ? '<span class="tag">' + s.trucks.join('・') + '</span>' : ''}
-        ${(s.collectors && s.collectors.length) ? '<span class="tag">' + s.collectors.join('・') + '</span>' : ''}
-      </div>
-      ${s.notes ? '<div class="sub">' + s.notes + '</div>' : ''}
-      <div class="btnrow">
-        <button class="ghost" onclick="printSchedule('${s.id}')">印刷</button>
-        <button class="danger" onclick="deleteSchedule('${s.id}')">削除</button>
-      </div>
-    </div>
-  `).join('');
+function buildScheduleLineText(s) {
+  return '【回収予定】\n日付:' + (s.date || '') +
+    '\n取引先:' + (s.companyName || '') + ' ' + (s.locationName || '') +
+    '\n住所:' + (s.address || '') +
+    '\n電話:' + (s.phone || '') +
+    '\n取引先担当者:' + (s.clientContact || 'なし') +
+    '\n回収内容:' + (s.content || 'なし') +
+    '\nトラック:' + ((s.trucks||[]).join('・') || 'なし') +
+    '\n担当者:' + ((s.collectors||[]).join('・') || 'なし') +
+    '\n備考:' + (s.notes || 'なし');
 }
-function deleteSchedule(id) {
-  if (!confirm('この回収予定を削除しますか?')) return;
-  db.collection('pickupSchedule').doc(id).delete();
+function shareScheduleToLine(s) {
+  window.open('https://line.me/R/msg/text/?' + encodeURIComponent(buildScheduleLineText(s)), '_blank');
 }
-function printSchedule(id) {
-  const s = scheduleItems.find(x => x.id === id);
-  if (!s) return;
+function printScheduleData(s) {
   const w = window.open('', '_blank');
   w.document.write(
     '<html><head><meta charset="UTF-8"><title>回収予定 ' + s.companyName + '</title>' +
@@ -1442,28 +1542,74 @@ function printSchedule(id) {
   );
   w.document.close();
 }
+function printScheduleFromDone() {
+  if (!lastScheduleData) return;
+  printScheduleData(lastScheduleData);
+}
+function shareScheduleFromDoneToLine() {
+  if (!lastScheduleData) return;
+  shareScheduleToLine(lastScheduleData);
+}
+function renderScheduleList() {
+  const list = document.getElementById('scheduleList');
+  if (!list) return;
+  if (scheduleItems.length === 0) { list.innerHTML = '<div class="empty">回収予定はまだありません</div>'; return; }
+  list.innerHTML = scheduleItems.map(s => `
+    <div class="card">
+      <h2>${s.date} ${s.companyName}</h2>
+      <div class="locName">${s.locationName || ''}</div>
+      <div class="sub">${s.address || ''}${s.address && s.phone ? ' ／ ' : ''}${s.phone || ''}</div>
+      ${s.clientContact ? '<div class="sub">先方担当者: ' + s.clientContact + '</div>' : ''}
+      <div class="tags">
+        ${s.content ? '<span class="tag">' + s.content + '</span>' : ''}
+        ${(s.trucks && s.trucks.length) ? '<span class="tag">' + s.trucks.join('・') + '</span>' : ''}
+        ${(s.collectors && s.collectors.length) ? '<span class="tag">' + s.collectors.join('・') + '</span>' : ''}
+      </div>
+      ${s.notes ? '<div class="sub">' + s.notes + '</div>' : ''}
+      <div class="btnrow">
+        <button class="ghost" onclick="printSchedule('${s.id}')">印刷</button>
+        <button class="ghost" onclick="shareScheduleToLineById('${s.id}')">LINEへ送る</button>
+        <button class="danger" onclick="deleteSchedule('${s.id}')">削除</button>
+      </div>
+    </div>
+  `).join('');
+}
+function deleteSchedule(id) {
+  if (!confirm('この回収予定を削除しますか?')) return;
+  db.collection('pickupSchedule').doc(id).delete();
+}
+function printSchedule(id) {
+  const s = scheduleItems.find(x => x.id === id);
+  if (!s) return;
+  printScheduleData(s);
+}
+function shareScheduleToLineById(id) {
+  const s = scheduleItems.find(x => x.id === id);
+  if (!s) return;
+  shareScheduleToLine(s);
+}
 
 function renderSettings() {
   const staffDiv = document.getElementById('staffChips');
-  if (staffDiv) staffDiv.innerHTML = staffList.length ? staffList.map(t => '<span class="chip">' + t + ' <span class="x" onclick="removeStaff(\'' + t + '\')">✕</span></span>').join('')
+  if (staffDiv) staffDiv.innerHTML = staffList.length ? staffList.map(t => '<div class="chip">' + t + '<span class="x" onclick="removeStaff(\'' + t + '\')">削除</span></div>').join('')
     : '<span style="color:#999;font-size:14px;">まだ登録されていません</span>';
 
   const mtDiv = document.getElementById('manifestTypeChips');
-  if (mtDiv) mtDiv.innerHTML = manifestTypeList.length ? manifestTypeList.map(t => '<span class="chip">' + t + ' <span class="x" onclick="removeManifestType(\'' + t + '\')">✕</span></span>').join('')
+  if (mtDiv) mtDiv.innerHTML = manifestTypeList.length ? manifestTypeList.map(t => '<div class="chip">' + t + '<span class="x" onclick="removeManifestType(\'' + t + '\')">削除</span></div>').join('')
     : '<span style="color:#999;font-size:14px;">まだ登録されていません</span>';
 
   const dpDiv = document.getElementById('disposalChips');
-  if (dpDiv) dpDiv.innerHTML = disposalList.length ? disposalList.map(t => '<span class="chip">' + t + ' <span class="x" onclick="removeDisposal(\'' + t + '\')">✕</span></span>').join('')
+  if (dpDiv) dpDiv.innerHTML = disposalList.length ? disposalList.map(t => '<div class="chip">' + t + '<span class="x" onclick="removeDisposal(\'' + t + '\')">削除</span></div>').join('')
     : '<span style="color:#999;font-size:14px;">まだ登録されていません</span>';
 
   const truckDiv = document.getElementById('truckChips');
-  truckDiv.innerHTML = truckList.length ? truckList.map(t => '<span class="chip">' + t + ' <span class="x" onclick="removeTruck(\'' + t + '\')">✕</span></span>').join('')
+  truckDiv.innerHTML = truckList.length ? truckList.map(t => '<div class="chip">' + t + '<span class="x" onclick="removeTruck(\'' + t + '\')">削除</span></div>').join('')
     : '<span style="color:#999;font-size:14px;">まだ登録されていません</span>';
   const colDiv = document.getElementById('collectorChips');
-  colDiv.innerHTML = collectorList.length ? collectorList.map(n => '<span class="chip">' + n + ' <span class="x" onclick="removeCollector(\'' + n + '\')">✕</span></span>').join('')
+  colDiv.innerHTML = collectorList.length ? collectorList.map(n => '<div class="chip">' + n + '<span class="x" onclick="removeCollector(\'' + n + '\')">削除</span></div>').join('')
     : '<span style="color:#999;font-size:14px;">まだ登録されていません</span>';
   const shDiv = document.getElementById('shuhinChips');
-  shDiv.innerHTML = shuhinOptions.length ? shuhinOptions.map(n => '<span class="chip">' + n + ' <span class="x" onclick="removeShuhin(\'' + n + '\')">✕</span></span>').join('')
+  shDiv.innerHTML = shuhinOptions.length ? shuhinOptions.map(n => '<div class="chip">' + n + '<span class="x" onclick="removeShuhin(\'' + n + '\')">削除</span></div>').join('')
     : '<span style="color:#999;font-size:14px;">まだ登録されていません</span>';
 }
 

@@ -246,6 +246,11 @@ button.ghost { background: #fff; color: #14213D; border: 1px solid #14213D; }
 <h3 style="border-top:none;margin-top:0;">よみがな未登録の取引先</h3>
 <div id="yomiganaMissingList"></div>
 
+<h3>👯 ダブり整理(同じ会社が二重登録されていないかチェック)</h3>
+<div style="font-size:13px;color:#666;margin-bottom:8px;">名前・よみがな・旧社名(／区切り)が重なる会社をグループで表示します。残す方を決めて、不要な方を🗑で削除してください</div>
+<button type="button" onclick="renderDupList()" style="border:none;background:#14213D;color:white;border-radius:8px;padding:10px 16px;margin-bottom:8px;">🔍 ダブりをチェック</button>
+<div id="dupList"></div>
+
 <h3>📄 契約にあるのに未登録の会社(マスタ管理と連動)</h3>
 <div style="font-size:13px;color:#666;margin-bottom:8px;">マスタ管理の契約タブにいて、まだ引取先管理に登録されていない会社です。「取り込む」で登録できます(住所・電話は取引先マスタにあれば自動で入ります)</div>
 <button type="button" onclick="renderContractMissingList()" style="border:none;background:#14213D;color:white;border-radius:8px;padding:10px 16px;margin-bottom:8px;">🔄 一覧を表示・更新</button>
@@ -1322,13 +1327,10 @@ if(t==='〇'||t==='○'||t==='0')return '契約あり（日付不明）';
 return t;
 }
 function contractsForCompany(c){
-const targets=[normCompanyName(c.name)];
-const myYomi=kataToHira((c.yomigana||'').trim());
+const myKeys=companyMatchKeys(c.name,c.yomigana);
 return rawContracts.filter(ct=>{
-const parts=String(ct.company).split(/[／/]/).map(normCompanyName).filter(Boolean);
-if(parts.some(p=>targets.indexOf(p)>=0))return true;
-const ctYomi=kataToHira((contractYomiMap[ct.company]||'').trim());
-return myYomi&&ctYomi&&myYomi===ctYomi;
+const ctKeys=companyMatchKeys(ct.company,contractYomiMap[ct.company]||'');
+return ctKeys.some(k=>myKeys.indexOf(k)>=0);
 });
 }
 function renderDetailContracts(c){
@@ -1355,13 +1357,11 @@ if(!box)return;
 box.innerHTML='<span style="color:#999;font-size:14px;">読み込み中...</span>';
 masterPickCache=null; // 最新のマスタを取り直す
 loadMasterClients().then(list=>{
-const regNorm=companies.map(c=>normCompanyName(c.name));
-const regYomi=companies.map(c=>kataToHira((c.yomigana||'').trim())).filter(Boolean);
+const regKeys={};
+companies.forEach(c=>companyMatchKeys(c.name,c.yomigana).forEach(k=>regKeys[k]=1));
 const missing=list.filter(m=>{
-if(regNorm.indexOf(normCompanyName(m.name))>=0)return false;
-const my=kataToHira((m.yomi||'').trim());
-if(my&&regYomi.indexOf(my)>=0)return false;
-return true;
+const keys=companyMatchKeys(m.name,m.yomi);
+return !keys.some(k=>regKeys[k]);
 });
 if(!missing.length){box.innerHTML='<span style="color:#999;font-size:14px;">未登録の会社はありません(全て登録済みです)</span>';return;}
 window._cmMissing=missing;
@@ -1376,6 +1376,76 @@ missing.map((m,i)=>
 '</div>').join('');
 });
 }
+function companyMatchKeys(nameStr, yomiStr){
+const keys=[];
+String(nameStr||'').split(/[／/]/).forEach(p=>{
+const n=normCompanyName(p.replace(/[（(].*?[）)]/g,'').replace(/[※"”]/g,''));
+if(n)keys.push('n:'+n);
+});
+const y=kataToHira((yomiStr||'').trim());
+if(y)keys.push('y:'+y);
+return keys;
+}
+function renderDupList(){
+const box=document.getElementById('dupList');
+if(!box)return;
+// 同じキーを持つ会社をグループ化
+const keyToGroup={};
+const groupOf={};
+let gSeq=0;
+companies.forEach(c=>{
+const keys=companyMatchKeys(c.name,c.yomigana);
+let g=null;
+keys.forEach(k=>{if(keyToGroup[k]!==undefined&&g===null)g=keyToGroup[k];});
+if(g===null)g=gSeq++;
+groupOf[c.id]=g;
+keys.forEach(k=>{
+if(keyToGroup[k]!==undefined&&keyToGroup[k]!==g){
+const old=keyToGroup[k];
+Object.keys(groupOf).forEach(id=>{if(groupOf[id]===old)groupOf[id]=g;});
+Object.keys(keyToGroup).forEach(kk=>{if(keyToGroup[kk]===old)keyToGroup[kk]=g;});
+}
+keyToGroup[k]=g;
+});
+});
+const groups={};
+companies.forEach(c=>{
+const g=groupOf[c.id];
+if(!groups[g])groups[g]=[];
+groups[g].push(c);
+});
+const dups=Object.values(groups).filter(arr=>arr.length>1);
+if(!dups.length){box.innerHTML='<span style="color:#999;font-size:14px;">ダブりは見つかりませんでした</span>';return;}
+box.innerHTML='<div style="font-size:13px;color:#333;margin-bottom:6px;">'+dups.length+'組のダブり候補があります</div>'+
+dups.map(arr=>
+'<div style="border:2px solid #f0c040;border-radius:10px;padding:8px;margin-bottom:10px;">'+
+arr.map(c=>
+'<div class="chip" style="flex-wrap:wrap;align-items:center;">'+
+'<span style="flex:1;min-width:0;"><b>'+escapeHtmlMp(c.name)+'</b>'+
+(c.yomigana?'<span style="color:#999;font-size:12px;">　'+escapeHtmlMp(c.yomigana)+'</span>':'<span style="color:#c00;font-size:12px;">　よみ未登録</span>')+
+'<br><span style="font-size:12px;color:#666;">拠点'+((c.locations||[]).length)+'件'+(((c.locations||[])[0]||{}).address?'・📍'+escapeHtmlMp((c.locations[0].address||'').slice(0,18)):'')+'</span></span>'+
+'<button type="button" onclick="deleteDupCompany(\''+c.id+'\')" style="border:none;background:#c0392b;color:white;border-radius:8px;padding:8px 14px;margin-left:8px;">🗑 削除</button>'+
+'</div>').join('')+
+'</div>').join('');
+}
+async function deleteDupCompany(id){
+const c=companies.find(x=>x.id===id);
+if(!c)return;
+// 引取記録の有無を確認してから削除
+let logCount=0;
+try{
+for(const loc of (c.locations||[])){
+const snap=await db.collection('pickupLogs').where('locationId','==',loc.id).get();
+logCount+=snap.size||0;
+}
+}catch(e){}
+const warn=logCount>0?'\n\n⚠️ この会社には引取記録が'+logCount+'件あります。削除すると記録が開けなくなるので、こちらは【残す】のがおすすめです。':'\n(引取記録はありません)';
+if(!confirm('「'+c.name+'」を削除しますか？'+warn))return;
+db.collection('companies').doc(id).delete().then(()=>{
+setTimeout(renderDupList,600);
+}).catch(err=>alert('削除に失敗しました: '+err.message));
+}
+
 function contractCompanyToData(m){
 return {
 name:m.name,

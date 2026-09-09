@@ -245,6 +245,11 @@ button.ghost { background: #fff; color: #14213D; border: 1px solid #14213D; }
 <h3 style="border-top:none;margin-top:0;">よみがな未登録の取引先</h3>
 <div id="yomiganaMissingList"></div>
 
+<h3>📄 契約にあるのに未登録の会社(マスタ管理と連動)</h3>
+<div style="font-size:13px;color:#666;margin-bottom:8px;">マスタ管理の契約タブにいて、まだ引取先管理に登録されていない会社です。「取り込む」で登録できます(住所・電話は取引先マスタにあれば自動で入ります)</div>
+<button type="button" onclick="renderContractMissingList()" style="border:none;background:#14213D;color:white;border-radius:8px;padding:10px 16px;margin-bottom:8px;">🔄 一覧を表示・更新</button>
+<div id="contractMissingList"></div>
+
 <h3>担当者一覧(社内)</h3>
 <div id="staffChips"></div>
 <div class="addRow">
@@ -1322,6 +1327,51 @@ return '<div style="padding:6px 0;border-bottom:1px dashed #cde3d5;">'+
 '</div>';
 }).join('');
 });
+}
+
+function renderContractMissingList(){
+const box=document.getElementById('contractMissingList');
+if(!box)return;
+box.innerHTML='<span style="color:#999;font-size:14px;">読み込み中...</span>';
+masterPickCache=null; // 最新のマスタを取り直す
+loadMasterClients().then(list=>{
+const regNorm=companies.map(c=>normCompanyName(c.name));
+const regYomi=companies.map(c=>kataToHira((c.yomigana||'').trim())).filter(Boolean);
+const missing=list.filter(m=>{
+if(regNorm.indexOf(normCompanyName(m.name))>=0)return false;
+const my=kataToHira((m.yomi||'').trim());
+if(my&&regYomi.indexOf(my)>=0)return false;
+return true;
+});
+if(!missing.length){box.innerHTML='<span style="color:#999;font-size:14px;">未登録の会社はありません(全て登録済みです)</span>';return;}
+window._cmMissing=missing;
+box.innerHTML='<div style="font-size:13px;color:#333;margin-bottom:6px;">'+missing.length+'社が未登録です</div>'+
+missing.map((m,i)=>
+'<div class="chip" style="flex-wrap:wrap;align-items:center;">'+
+'<span style="flex:1;min-width:0;"><b>'+escapeHtmlMp(m.name)+'</b>'+(m.yomi?'<span style="color:#999;font-size:12px;">　'+escapeHtmlMp(m.yomi)+'</span>':'')+
+(m.sheets.length?'<br><span style="font-size:12px;color:#0a6b3d;">📄 '+escapeHtmlMp(m.sheets.slice(0,3).join('・'))+(m.sheets.length>3?' ほか':'')+'</span>':'')+
+'</span>'+
+'<button type="button" onclick="importContractCompany('+i+')" style="border:none;background:#0a6b3d;color:white;border-radius:8px;padding:8px 14px;margin-left:8px;">取り込む</button>'+
+'</div>').join('');
+});
+}
+function importContractCompany(i){
+const m=(window._cmMissing||[])[i];
+if(!m)return;
+if(!confirm(m.name+' を引取先管理に登録しますか？'))return;
+const data={
+name:m.name,
+yomigana:m.yomi||'',
+staff:'',clientContact:'',clientContactPhone:'',
+manifestHas:'なし',manifestType:[],trucks:[],items:{},shuhinSelected:[],notes:'',
+locations:[{id:newId(),locationName:'本社',address:m.address||'',phone:m.tel||'',siteName:'',siteAddress:'',sitePhone:''}],
+createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+};
+db.collection('companies').add(data).then(()=>{
+alert(m.name+' を登録しました。担当者や回収品などは会社を開いて「編集」から追加してください');
+renderContractMissingList();
+}).catch(err=>alert('登録に失敗しました: '+err.message));
 }
 
 function saveNewCompany() {

@@ -515,6 +515,7 @@ button.ghost { background: #fff; color: #14213D; border: 1px solid #14213D; }
   <div class="detailRow"><div class="label">持ち物</div><div id="detailItems"></div></div>
   <div class="detailRow"><div class="label">回収品</div><div id="detailShuhin"></div></div>
   <div class="detailRow"><div class="label">備考</div><div id="detailNotes"></div></div>
+  <div class="detailRow" style="background:#eef7f1;border-radius:8px;padding:8px;"><div class="label" style="color:#0a6b3d;">📄 契約(マスタ管理と連動)</div><div id="detailContracts">読み込み中...</div></div>
 
   <div class="lastPickupBox" id="lastPickupBox" style="display:none;">
     <div class="label">前回の引取情報</div>
@@ -1225,6 +1226,8 @@ document.getElementById('addModal').classList.add('show');
 
 /* ---------- 契約の排出事業者から引用（住所・電話は取引先マスタで補完） ---------- */
 let masterPickCache = null;
+let rawContracts = [];
+let contractYomiMap = {};
 function kataToHira(s){return (s||"").replace(/[\u30a1-\u30f6]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0x60));}
 function normCompanyName(s){return (s||"").replace(/[\s　]/g,"").replace(/㈱|\(株\)|（株）|株式会社/g,"").replace(/㈲|\(有\)|（有）|有限会社/g,"").toLowerCase();}
 function loadMasterClients(){
@@ -1236,6 +1239,9 @@ db.collection('master_clients').get()
 ]).then(res=>{
 const yomiMap={};
 res[1].forEach(d=>{const v=d.data();if(v.name)yomiMap[v.name]=v.yomi||'';});
+contractYomiMap=yomiMap;
+rawContracts=[];
+res[0].forEach(d=>{const v=d.data();if(!v.isMemo&&v.company)rawContracts.push(v);});
 const clientByNorm={};
 res[2].forEach(d=>{const v=d.data();if(v.name)clientByNorm[normCompanyName(v.name)]=v;});
 const byName={};
@@ -1283,6 +1289,39 @@ document.getElementById('newLocPhone').value=c.tel||'';
 document.getElementById('masterPickInput').value='';
 document.getElementById('masterPickResults').innerHTML=
 '<div style="font-size:13px;color:#14213D;font-weight:bold;">✅ '+escapeHtmlMp(c.name||'')+' を契約から引用しました'+((c.address||c.tel)?'（住所・電話はマスタから補完）':'（住所・電話はマスタ未登録のため手入力してください）')+'</div>';
+}
+
+function contractDateDisp(s){
+const t=(s||'').trim();
+if(t==='〇'||t==='○'||t==='0')return '契約あり（日付不明）';
+return t;
+}
+function contractsForCompany(c){
+const targets=[normCompanyName(c.name)];
+const myYomi=kataToHira((c.yomigana||'').trim());
+return rawContracts.filter(ct=>{
+const parts=String(ct.company).split(/[／/]/).map(normCompanyName).filter(Boolean);
+if(parts.some(p=>targets.indexOf(p)>=0))return true;
+const ctYomi=kataToHira((contractYomiMap[ct.company]||'').trim());
+return myYomi&&ctYomi&&myYomi===ctYomi;
+});
+}
+function renderDetailContracts(c){
+const box=document.getElementById('detailContracts');
+if(!box)return;
+box.textContent='読み込み中...';
+loadMasterClients().then(()=>{
+const hits=contractsForCompany(c);
+if(!hits.length){box.innerHTML='<span style="color:#999;">契約の登録なし（マスタ管理の契約タブで登録できます）</span>';return;}
+box.innerHTML=hits.map(ct=>{
+const disp=(ct.disposer||'').trim()||((ct.route||'').split('／')[0]||'').trim();
+const date=contractDateDisp(ct.content);
+return '<div style="padding:6px 0;border-bottom:1px dashed #cde3d5;">'+
+'<b>'+escapeHtmlMp(ct.sheet||'品名不明')+'</b>'+(disp?'（'+escapeHtmlMp(disp)+'行き）':'（処分先不明）')+
+(date?'<br><span style="font-size:13px;color:#555;">契約日: '+escapeHtmlMp(date)+'</span>':'')+
+'</div>';
+}).join('');
+});
 }
 
 function saveNewCompany() {
@@ -1335,6 +1374,7 @@ document.getElementById('detailTruck').textContent = arrLabel(c.trucks);
 document.getElementById('detailItems').textContent = itemsLabel(c.items);
 document.getElementById('detailShuhin').textContent = arrLabel(c.shuhinSelected);
 document.getElementById('detailNotes').textContent = c.notes || 'なし';
+renderDetailContracts(c);
 const siteWrap = document.getElementById('detailSiteWrap');
 if (loc.siteName || loc.siteAddress || loc.sitePhone) {
   siteWrap.style.display = 'block';

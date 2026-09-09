@@ -145,6 +145,7 @@ button.ghost { background: #fff; color: #14213D; border: 1px solid #14213D; }
   <div class="listBackRow">
     <button class="backBtn" onclick="showHomeView()">← ホームに戻る</button>
   </div>
+  <div id="gyouChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;"></div>
   <div id="clientList"></div>
 </div>
 </div>
@@ -1157,15 +1158,34 @@ if (activeTab === 'clients') renderClientList();
 if (activeTab === 'todayhistory') renderTodayHistory();
 }
 
+let gyouFilter = '';
+function setGyouFilter(g){ gyouFilter = g; renderClientList(); }
+function renderGyouChips(){
+const box = document.getElementById('gyouChips');
+if (!box) return;
+const chips = [''].concat(GYOU_ORDER).concat(['他']);
+box.innerHTML = chips.map(g => {
+  const label = g === '' ? '全て' : g;
+  const on = gyouFilter === g;
+  return '<button type="button" onclick="setGyouFilter(\'' + g + '\')" style="border:none;border-radius:8px;padding:9px 14px;font-size:15px;font-weight:bold;' +
+    (on ? 'background:#14213D;color:white;' : 'background:#e3e8f0;color:#14213D;') + '">' + label + '</button>';
+}).join('');
+}
 function renderClientList() {
+renderGyouChips();
 const keyword = document.getElementById('searchBox').value.trim();
 const list = document.getElementById('clientList');
 let cards = [];
 companies.forEach(c => {
   if (keyword && !companyMatchesKeyword(c, keyword)) return;
+  if (gyouFilter) {
+    const gk = getGroupKey(c);
+    if (gyouFilter === '他') { if (GYOU_ORDER.includes(gk)) return; }
+    else if (gk !== gyouFilter) return;
+  }
   (c.locations || []).forEach(loc => cards.push({company: c, loc}));
 });
-if (cards.length === 0) { list.innerHTML = '<div class="empty">引取先がまだ登録されていません</div>'; return; }
+if (cards.length === 0) { list.innerHTML = '<div class="empty">該当する引取先がありません</div>'; return; }
 
 const groups = {};
 cards.forEach(item => {
@@ -1346,6 +1366,7 @@ return true;
 if(!missing.length){box.innerHTML='<span style="color:#999;font-size:14px;">未登録の会社はありません(全て登録済みです)</span>';return;}
 window._cmMissing=missing;
 box.innerHTML='<div style="font-size:13px;color:#333;margin-bottom:6px;">'+missing.length+'社が未登録です</div>'+
+'<button type="button" onclick="importAllContractCompanies()" style="border:none;background:#b45309;color:white;border-radius:8px;padding:12px 16px;margin-bottom:8px;width:100%;font-weight:bold;">📥 '+missing.length+'社をまとめて全部取り込む</button>'+
 missing.map((m,i)=>
 '<div class="chip" style="flex-wrap:wrap;align-items:center;">'+
 '<span style="flex:1;min-width:0;"><b>'+escapeHtmlMp(m.name)+'</b>'+(m.yomi?'<span style="color:#999;font-size:12px;">　'+escapeHtmlMp(m.yomi)+'</span>':'')+
@@ -1355,11 +1376,8 @@ missing.map((m,i)=>
 '</div>').join('');
 });
 }
-function importContractCompany(i){
-const m=(window._cmMissing||[])[i];
-if(!m)return;
-if(!confirm(m.name+' を引取先管理に登録しますか？'))return;
-const data={
+function contractCompanyToData(m){
+return {
 name:m.name,
 yomigana:m.yomi||'',
 staff:'',clientContact:'',clientContactPhone:'',
@@ -1368,7 +1386,28 @@ locations:[{id:newId(),locationName:'本社',address:m.address||'',phone:m.tel||
 createdAt:firebase.firestore.FieldValue.serverTimestamp(),
 updatedAt:firebase.firestore.FieldValue.serverTimestamp()
 };
-db.collection('companies').add(data).then(()=>{
+}
+async function importAllContractCompanies(){
+const missing=window._cmMissing||[];
+if(!missing.length)return;
+if(!confirm(missing.length+'社をまとめて引取先管理に登録します。よろしいですか？\n(よみがな・住所はマスタにある分だけ入ります。あとから編集で足せます)'))return;
+const box=document.getElementById('contractMissingList');
+let ok=0,ng=0;
+for(const m of missing){
+try{
+await db.collection('companies').add(contractCompanyToData(m));
+ok++;
+box.innerHTML='<span style="font-size:14px;">取り込み中... '+ok+'/'+missing.length+'社</span>';
+}catch(e){ng++;}
+}
+alert(ok+'社を取り込みました'+(ng?('（'+ng+'社は失敗）'):'')+'。取引先一覧に反映されています');
+renderContractMissingList();
+}
+function importContractCompany(i){
+const m=(window._cmMissing||[])[i];
+if(!m)return;
+if(!confirm(m.name+' を引取先管理に登録しますか？'))return;
+db.collection('companies').add(contractCompanyToData(m)).then(()=>{
 alert(m.name+' を登録しました。担当者や回収品などは会社を開いて「編集」から追加してください');
 renderContractMissingList();
 }).catch(err=>alert('登録に失敗しました: '+err.message));

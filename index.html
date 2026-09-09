@@ -187,15 +187,6 @@ button.ghost { background: #fff; color: #14213D; border: 1px solid #14213D; }
     <label>回収物(自由記入・その他)</label>
     <textarea id="todayShuhinFreeText" placeholder="候補にないものはこちらに記入"></textarea>
 
-    <label>マニフェスト(任意)</label>
-    <div class="radiorow">
-      <label><input type="radio" name="todayManifestHas" value="あり"> あり</label>
-      <label><input type="radio" name="todayManifestHas" value="なし" checked> なし</label>
-    </div>
-    <div class="shuhinDropdown">
-      <button type="button" class="shuhinToggle" id="todayManifestTypeToggleBtn" onclick="toggleMultiDropdown('todayManifestTypeChecks')">マニフェスト種類(任意) ▾</button>
-      <div class="checkrow shuhinPanel" id="todayManifestTypeChecks" style="display:none;"></div>
-    </div>
 
     <label>トラック(複数可)</label>
     <div class="shuhinDropdown">
@@ -263,12 +254,6 @@ button.ghost { background: #fff; color: #14213D; border: 1px solid #14213D; }
   <button onclick="addStaff()">追加</button>
 </div>
 
-<h3>マニフェスト種類一覧</h3>
-<div id="manifestTypeChips"></div>
-<div class="addRow">
-  <input type="text" id="newManifestTypeInput" placeholder="例:産業廃棄物管理票(7枚複写)">
-  <button onclick="addManifestType()">追加</button>
-</div>
 
 <h3>トラック一覧</h3>
 <div id="truckChips"></div>
@@ -319,16 +304,6 @@ button.ghost { background: #fff; color: #14213D; border: 1px solid #14213D; }
   <label>取引先担当者の電話</label>
   <input type="tel" id="newClientContactPhone" placeholder="例:090-1234-5678">
 
-  <label>マニフェスト</label>
-  <div class="radiorow">
-    <label><input type="radio" name="newManifestHas" value="あり"> あり</label>
-    <label><input type="radio" name="newManifestHas" value="なし" checked> なし</label>
-  </div>
-  <label>マニフェスト種類(複数可)</label>
-  <div class="shuhinDropdown">
-    <button type="button" class="shuhinToggle" id="newManifestTypeToggleBtn" onclick="toggleMultiDropdown('newManifestTypeChecks')">マニフェスト種類を選択 ▾</button>
-    <div class="checkrow shuhinPanel" id="newManifestTypeChecks" style="display:none;"></div>
-  </div>
   <label>トラック(複数可)</label>
   <div class="shuhinDropdown">
     <button type="button" class="shuhinToggle" id="newTruckToggleBtn" onclick="toggleMultiDropdown('newTruckChecks')">トラックを選択 ▾</button>
@@ -405,16 +380,6 @@ button.ghost { background: #fff; color: #14213D; border: 1px solid #14213D; }
   <label>取引先担当者の電話</label>
   <input type="tel" id="editClientContactPhone">
 
-  <label>マニフェスト</label>
-  <div class="radiorow">
-    <label><input type="radio" name="editManifestHas" value="あり"> あり</label>
-    <label><input type="radio" name="editManifestHas" value="なし"> なし</label>
-  </div>
-  <label>マニフェスト種類(複数可)</label>
-  <div class="shuhinDropdown">
-    <button type="button" class="shuhinToggle" id="editManifestTypeToggleBtn" onclick="toggleMultiDropdown('editManifestTypeChecks')">マニフェスト種類を選択 ▾</button>
-    <div class="checkrow shuhinPanel" id="editManifestTypeChecks" style="display:none;"></div>
-  </div>
   <label>トラック(複数可)</label>
   <div class="shuhinDropdown">
     <button type="button" class="shuhinToggle" id="editTruckToggleBtn" onclick="toggleMultiDropdown('editTruckChecks')">トラックを選択 ▾</button>
@@ -985,14 +950,11 @@ if (e.target.classList && e.target.classList.contains('multiCk')) {
 registerMultiSelect('newShuhinChecks','newShuhinToggleBtn','回収品を選択');
 registerMultiSelect('editShuhinChecks','editShuhinToggleBtn','回収品を選択');
 registerMultiSelect('historyShuhin','historyShuhinToggleBtn','回収品を選択');
-registerMultiSelect('newManifestTypeChecks','newManifestTypeToggleBtn','マニフェスト種類を選択');
-registerMultiSelect('editManifestTypeChecks','editManifestTypeToggleBtn','マニフェスト種類を選択');
 registerMultiSelect('newTruckChecks','newTruckToggleBtn','トラックを選択');
 registerMultiSelect('editTruckChecks','editTruckToggleBtn','トラックを選択');
 registerMultiSelect('historyTruckChecks','historyTruckToggleBtn','トラックを選択');
 registerMultiSelect('historyCollectorChecks','historyCollectorToggleBtn','作業員を選択');
 registerMultiSelect('todayShuhinChecks','todayShuhinToggleBtn','回収物を選択');
-registerMultiSelect('todayManifestTypeChecks','todayManifestTypeToggleBtn','マニフェスト種類(任意)');
 registerMultiSelect('todayTruckChecks','todayTruckToggleBtn','トラックを選択');
 registerMultiSelect('todayCollectorChecks','todayCollectorToggleBtn','作業員を選択');
 registerMultiSelect('schedTruckChecks','schedTruckToggleBtn','トラックを選択');
@@ -1203,19 +1165,33 @@ const orderedKeys = GYOU_ORDER.filter(k => groups[k]).concat(otherKeys).concat(g
 
 list.innerHTML = orderedKeys.map(key => {
   const items = groups[key].sort((a,b) => (a.company.yomigana || a.company.name || '').localeCompare(b.company.yomigana || b.company.name || '', 'ja'));
-  return '<h3 style="border-top:none;color:#14213D;">' + key + '</h3>' + items.map(({company, loc}) => `
-  <div class="card" onclick="openDetail('${company.id}','${loc.id}')">
-    <h2>${company.name}</h2>
-    <div class="locName">${loc.locationName || ''}</div>
-    <div class="sub">${loc.address || ''}${loc.address && loc.phone ? ' ／ ' : ''}${loc.phone || ''}</div>
-    ${company.clientContact ? '<div class="sub">先方担当者: ' + company.clientContact + '</div>' : ''}
-    <div class="tags">
-      <span class="tag">${itemsLabel(company.items)}</span>
-      ${(company.shuhinSelected && company.shuhinSelected.length) ? '<span class="tag">' + arrLabel(company.shuhinSelected) + '</span>' : ''}
-      ${company.manifestHas === 'あり' ? '<span class="tag manifest">マニフェスト有</span>' : ''}
-    </div>
-  </div>
-`).join('');
+  // 同じよみがなの会社(旧社名など)は同じ枠にまとめる
+  const frames = [];
+  const frameIdx = {};
+  items.forEach(it => {
+    const y = kataToHira((it.company.yomigana || '').trim());
+    const fkey = y ? 'y:' + y : 'c:' + it.company.id;
+    if (frameIdx[fkey] === undefined) { frameIdx[fkey] = frames.length; frames.push([]); }
+    frames[frameIdx[fkey]].push(it);
+  });
+  return '<h3 style="border-top:none;color:#14213D;">' + key + '</h3>' + frames.map(frame => {
+    const names = [];
+    frame.forEach(({company}) => { if (names.indexOf(company.name) < 0) names.push(company.name); });
+    const multi = names.length > 1;
+    const blocks = frame.map(({company, loc}) => {
+      const il = itemsLabel(company.items);
+      return '<div style="border-top:1px solid #eee;padding:8px 0 2px;" onclick="openDetail(\'' + company.id + '\',\'' + loc.id + '\')">' +
+        '<div class="locName">' + (multi ? company.name + '　' : '') + (loc.locationName || '') + '</div>' +
+        '<div class="sub">' + (loc.address || '') + (loc.address && loc.phone ? ' ／ ' : '') + (loc.phone || '') + '</div>' +
+        (company.clientContact ? '<div class="sub">先方担当者: ' + company.clientContact + '</div>' : '') +
+        '<div class="tags">' +
+          (il !== 'なし' ? '<span class="tag">' + il + '</span>' : '') +
+          ((company.shuhinSelected && company.shuhinSelected.length) ? '<span class="tag">' + arrLabel(company.shuhinSelected) + '</span>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+    return '<div class="card"><h2>' + names.join(' ／ ') + '</h2>' + blocks + '</div>';
+  }).join('');
 }).join('');
 }
 
@@ -1236,8 +1212,6 @@ document.getElementById('newYomigana').value = '';
 document.getElementById('newStaff').value = '';
 document.getElementById('newClientContact').value = '';
 document.getElementById('newClientContactPhone').value = '';
-document.querySelector('input[name=newManifestHas][value="なし"]').checked = true;
-fillMultiCheckboxes('newManifestTypeChecks', manifestTypeList, []);
 fillMultiCheckboxes('newTruckChecks', truckList, []);
 fillItemsToInputs('new', {});
 fillMultiCheckboxes('newShuhinChecks', shuhinOptions, []);
@@ -1495,15 +1469,14 @@ const loc = {
   siteAddress: document.getElementById('newSiteAddress').value.trim(),
   sitePhone: document.getElementById('newSitePhone').value.trim()
 };
-const manifestHasEl = document.querySelector('input[name=newManifestHas]:checked');
 const data = {
   name,
   yomigana: document.getElementById('newYomigana').value.trim(),
   staff: document.getElementById('newStaff').value,
   clientContact: document.getElementById('newClientContact').value.trim(),
   clientContactPhone: document.getElementById('newClientContactPhone').value.trim(),
-  manifestHas: manifestHasEl ? manifestHasEl.value : 'なし',
-  manifestType: getMultiCheckedValues('newManifestTypeChecks'),
+  manifestHas: 'なし',
+  manifestType: [],
   trucks: getMultiCheckedValues('newTruckChecks'),
   items: readItemsFromInputs('new'),
   shuhinSelected: getMultiCheckedValues('newShuhinChecks'),
@@ -1528,7 +1501,6 @@ document.getElementById('detailPhone').textContent = loc.phone || '未登録';
 document.getElementById('detailClientContact').textContent = c.clientContact || 'なし';
 document.getElementById('detailClientContactPhone').textContent = c.clientContactPhone || 'なし';
 document.getElementById('detailStaff').textContent = c.staff || 'なし';
-document.getElementById('detailManifest').textContent = manifestLabel(c);
 document.getElementById('detailTruck').textContent = arrLabel(c.trucks);
 document.getElementById('detailItems').textContent = itemsLabel(c.items);
 document.getElementById('detailShuhin').textContent = arrLabel(c.shuhinSelected);
@@ -1591,7 +1563,6 @@ return '【取引先情報】\n会社名:' + (c.name || '') +
   '\n取引先の担当者名:' + (c.clientContact || 'なし') +
   '\n取引先担当者の電話:' + (c.clientContactPhone || 'なし') +
   '\n担当者(社内):' + (c.staff || 'なし') +
-  '\nマニフェスト:' + manifestLabel(c) +
   '\nトラック:' + arrLabel(c.trucks) +
   '\n持ち物:' + itemsLabel(c.items) +
   '\n回収品:' + arrLabel(c.shuhinSelected) +
@@ -1660,7 +1631,6 @@ w.document.write(
   '<tr><td class="label">取引先の担当者名</td><td>' + (c.clientContact || '') + '</td></tr>' +
   '<tr><td class="label">取引先担当者の電話</td><td>' + (c.clientContactPhone || '') + '</td></tr>' +
   '<tr><td class="label">担当者(社内)</td><td>' + (c.staff || '') + '</td></tr>' +
-  '<tr><td class="label">マニフェスト</td><td>' + manifestLabel(c) + '</td></tr>' +
   '<tr><td class="label">トラック</td><td>' + arrLabel(c.trucks) + '</td></tr>' +
   '<tr><td class="label">持ち物</td><td>' + itemsLabel(c.items) + '</td></tr>' +
   '<tr><td class="label">回収品</td><td>' + arrLabel(c.shuhinSelected) + '</td></tr>' +
@@ -1685,9 +1655,6 @@ document.getElementById('editYomigana').value = c.yomigana || '';
 document.getElementById('editStaff').value = c.staff || '';
 document.getElementById('editClientContact').value = c.clientContact || '';
 document.getElementById('editClientContactPhone').value = c.clientContactPhone || '';
-const mh = c.manifestHas === 'あり' ? 'あり' : 'なし';
-document.querySelector('input[name=editManifestHas][value="' + mh + '"]').checked = true;
-fillMultiCheckboxes('editManifestTypeChecks', manifestTypeList, c.manifestType || []);
 fillMultiCheckboxes('editTruckChecks', truckList, c.trucks || []);
 fillItemsToInputs('edit', c.items);
 fillMultiCheckboxes('editShuhinChecks', shuhinOptions, c.shuhinSelected || []);
@@ -1717,15 +1684,12 @@ const newLocations = (c.locations || []).map(l => l.id !== locId ? l : {
   siteAddress: document.getElementById('editSiteAddress').value.trim(),
   sitePhone: document.getElementById('editSitePhone').value.trim()
 });
-const manifestHasEl = document.querySelector('input[name=editManifestHas]:checked');
 const data = {
   name,
   yomigana: document.getElementById('editYomigana').value.trim(),
   staff: document.getElementById('editStaff').value,
   clientContact: document.getElementById('editClientContact').value.trim(),
   clientContactPhone: document.getElementById('editClientContactPhone').value.trim(),
-  manifestHas: manifestHasEl ? manifestHasEl.value : 'なし',
-  manifestType: getMultiCheckedValues('editManifestTypeChecks'),
   trucks: getMultiCheckedValues('editTruckChecks'),
   items: readItemsFromInputs('edit'),
   shuhinSelected: getMultiCheckedValues('editShuhinChecks'),
@@ -1866,10 +1830,8 @@ document.getElementById('todayFormPhone').textContent = loc.phone || '未登録'
 const already = todayLogs.some(l => l.locationId === locId);
 document.getElementById('todayAlreadyDone').style.display = already ? 'block' : 'none';
 fillMultiCheckboxes('todayShuhinChecks', shuhinOptions, c.shuhinSelected || []);
-fillMultiCheckboxes('todayManifestTypeChecks', manifestTypeList, c.manifestType || []);
 fillMultiCheckboxes('todayTruckChecks', truckList, c.trucks || []);
 fillMultiCheckboxes('todayCollectorChecks', collectorList, []);
-document.querySelector('input[name=todayManifestHas][value="' + (c.manifestHas === 'あり' ? 'あり' : 'なし') + '"]').checked = true;
 document.getElementById('todayWorkContent').value = '';
 document.getElementById('todayShuhinFreeText').value = '';
 document.getElementById('todayNotes').value = '';
@@ -1883,12 +1845,9 @@ function printTodayForm() {
 if (!todayFormCompanyId || !todayFormLocId) { alert('取引先を選択してください'); return; }
 const c = companies.find(x => x.id === todayFormCompanyId);
 const loc = (c.locations || []).find(l => l.id === todayFormLocId);
-const manifestHasEl = document.querySelector('input[name=todayManifestHas]:checked');
 const workContent = document.getElementById('todayWorkContent').value.trim();
 const shuhinSelected = getMultiCheckedValues('todayShuhinChecks');
 const shuhinFreeText = document.getElementById('todayShuhinFreeText').value.trim();
-const manifestHas = manifestHasEl ? manifestHasEl.value : 'なし';
-const manifestType = getMultiCheckedValues('todayManifestTypeChecks');
 const trucks = getMultiCheckedValues('todayTruckChecks');
 const collectors = getMultiCheckedValues('todayCollectorChecks');
 const notes = document.getElementById('todayNotes').value.trim();
@@ -1904,7 +1863,6 @@ w.document.write(
   '<tr><td class="label">電話</td><td>' + (loc.phone || '') + '</td></tr>' +
   '<tr><td class="label">作業内容</td><td>' + workContent + '</td></tr>' +
   '<tr><td class="label">回収物</td><td>' + arrLabel(shuhinSelected) + (shuhinFreeText ? '(' + shuhinFreeText + ')' : '') + '</td></tr>' +
-  '<tr><td class="label">マニフェスト</td><td>' + (manifestHas === 'あり' ? 'あり ' + manifestType.join('・') : 'なし') + '</td></tr>' +
   '<tr><td class="label">トラック</td><td>' + arrLabel(trucks) + '</td></tr>' +
   '<tr><td class="label">作業員</td><td>' + arrLabel(collectors) + '</td></tr>' +
   '<tr><td class="label">備考</td><td>' + notes + '</td></tr>' +
@@ -1919,7 +1877,6 @@ function saveTodayComplete() {
 if (!todayFormCompanyId || !todayFormLocId) { alert('取引先を選択してください'); return; }
 const c = companies.find(x => x.id === todayFormCompanyId);
 const loc = (c.locations || []).find(l => l.id === todayFormLocId);
-const manifestHasEl = document.querySelector('input[name=todayManifestHas]:checked');
 const data = {
   companyId: todayFormCompanyId, companyName: c.name,
   locationId: todayFormLocId, locationName: loc.locationName, address: loc.address, phone: loc.phone,
@@ -1927,8 +1884,8 @@ const data = {
   workContent: document.getElementById('todayWorkContent').value.trim(),
   shuhinSelected: getMultiCheckedValues('todayShuhinChecks'),
   shuhinFreeText: document.getElementById('todayShuhinFreeText').value.trim(),
-  manifestHas: manifestHasEl ? manifestHasEl.value : 'なし',
-  manifestType: getMultiCheckedValues('todayManifestTypeChecks'),
+  manifestHas: 'なし',
+  manifestType: [],
   trucks: getMultiCheckedValues('todayTruckChecks'),
   collectors: getMultiCheckedValues('todayCollectorChecks'),
   items: {},
@@ -2508,7 +2465,6 @@ div.innerHTML = list.map((name, i) => {
 }
 function renderSettings() {
 renderReorderableList('staffChips', staffList, 'staffList');
-renderReorderableList('manifestTypeChips', manifestTypeList, 'manifestTypes');
 renderReorderableList('truckChips', truckList, 'truckList');
 renderReorderableList('collectorChips', collectorList, 'collectorList');
 renderReorderableList('shuhinChips', shuhinOptions, 'shuhinOptions');

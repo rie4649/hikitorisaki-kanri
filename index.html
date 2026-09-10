@@ -248,11 +248,8 @@ button.ghost { background: #fff; color: #14213D; border: 1px solid #14213D; }
 <div id="contractMissingList"></div>
 
 <h3>担当者一覧(社内)</h3>
-<div id="staffChips"></div>
-<div class="addRow">
-  <input type="text" id="newStaffInput" placeholder="例:川村">
-  <button onclick="addStaff()">追加</button>
-</div>
+<div style="background:#eef3fb;border-radius:10px;padding:12px;font-size:14px;line-height:1.7;">👤 担当者は<b>マスタ管理アプリ</b>の従業員タブで管理する方式になりました。そちらで追加・並べ替えすると、ここの選択肢にも反映されます。</div>
+<div id="staffChips" style="display:none;"></div>
 
 
 <h3>トラック一覧</h3>
@@ -1089,7 +1086,15 @@ db.collection('pickupSettings').doc(docName).onSnapshot(doc => {
 subscribeList('truckList', v => truckList = v);
 subscribeList('collectorList', v => collectorList = v);
 subscribeList('shuhinOptions', v => shuhinOptions = v);
-subscribeList('staffList', v => staffList = v, fillStaffSelectOptions);
+// 担当者(社内)はマスタ管理の従業員(employees)と連動
+db.collection('employees').onSnapshot(snap => {
+  const arr = [];
+  snap.forEach(d => { const v = d.data(); if (v.name) arr.push({ name: v.name, order: (v.order !== undefined && v.order !== null) ? v.order : 9999 }); });
+  arr.sort((a, b) => a.order - b.order);
+  staffList = arr.map(x => x.name);
+  renderSettings();
+  fillStaffSelectOptions();
+});
 subscribeList('manifestTypes', v => manifestTypeList = v);
 
 const searchBox = document.getElementById('searchBox');
